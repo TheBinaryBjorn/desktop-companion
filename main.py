@@ -31,21 +31,21 @@ COMPANION_NAME = "Jarvis"
 
 MIC_DEVICE = "plughw:1,0"
 RATE = 16000
-SAMPLE_WIDTH = 2  # 16-bit PCM
-FRAME_MS = 30     # 10/20/30 only
+SAMPLE_WIDTH = 2
+FRAME_MS = 30
 FRAME_BYTES = int(RATE * (FRAME_MS/1000) * SAMPLE_WIDTH)
 
-# Wake phrases derived from COMPANION_NAME
 WAKE_PHRASES = [f"hey {COMPANION_NAME.lower()}", COMPANION_NAME.lower()]
 
-# VAD tuning
 vad = webrtcvad.Vad(2)
 END_SILENCE_MS = 600
 MIN_UTTERANCE_MS = 300
 MAX_UTTERANCE_MS = 8000
-
-# Conversation mode timeout
 CONVO_TIMEOUT_MS = 8000
+
+# espeak default speed is ~160 wpm (~2.7 words/sec)
+# Each mouth open/close cycle should feel like one syllable beat (~0.15s)
+MOUTH_BEAT_SEC = 0.02
 
 # OLED
 W, H = 128, 64
@@ -60,30 +60,7 @@ display.fill(0); display.show()
 def _draw_frame(img):
     display.image(img); display.show()
 
-def _make_base(d):
-    """Draw the two eyes (always present)."""
-    d.ellipse((20, 20, 50, 50), fill=255)
-    d.ellipse((78, 20, 108, 50), fill=255)
-
-def _mouth_open(d, amount):
-    """
-    Draw a mouth below the eyes.
-    amount: 0.0 (closed) to 1.0 (fully open)
-    """
-    mx, my = 64, 56          # mouth center x, y
-    half_w = 18              # half-width of mouth
-    max_h = 10               # max height when fully open
-    h = int(amount * max_h)
-    if h <= 1:
-        # closed: thin line
-        d.line((mx - half_w, my, mx + half_w, my), fill=255, width=2)
-    else:
-        # open: ellipse
-        d.ellipse((mx - half_w, my - h, mx + half_w, my + h), fill=255)
-
-def draw_eyes(state="idle"):
-    img = Image.new("1", (W, H))
-    d = ImageDraw.Draw(img)
+def _make_eyes(d, state="idle"):
     if state == "idle":
         d.ellipse((20, 20, 50, 50), fill=255)
         d.ellipse((78, 20, 108, 50), fill=255)
@@ -96,26 +73,64 @@ def draw_eyes(state="idle"):
     elif state == "blink":
         d.rectangle((20, 30, 50, 34), fill=255)
         d.rectangle((78, 30, 108, 34), fill=255)
+
+def _rounded_rect(d, x0, y0, x1, y1, radius, fill=255):
+    """Draw a filled rounded rectangle."""
+    r = min(radius, (x1 - x0) // 2, (y1 - y0) // 2)
+    d.rectangle((x0 + r, y0, x1 - r, y1), fill=fill)
+    d.rectangle((x0, y0 + r, x1, y1 - r), fill=fill)
+    d.ellipse((x0, y0, x0 + 2*r, y0 + 2*r), fill=fill)
+    d.ellipse((x1 - 2*r, y0, x1, y0 + 2*r), fill=fill)
+    d.ellipse((x0, y1 - 2*r, x0 + 2*r, y1), fill=fill)
+    d.ellipse((x1 - 2*r, y1 - 2*r, x1, y1), fill=fill)
+
+def _draw_mouth(d, amount):
+    """
+    Draw a rounded-rectangle mouth below the eyes.
+    amount: 0.0 (closed) to 1.0 (fully open)
+    """
+    mx = 64
+    my = 57
+    half_w = 20
+    min_h = 2
+    max_h = 9
+    radius = 3
+
+    h = int(min_h + amount * (max_h - min_h))
+    x0, y0 = mx - half_w, my - h
+    x1, y1 = mx + half_w, my + h
+
+    if h <= min_h:
+        d.rectangle((x0, my - 1, x1, my + 1), fill=255)
+    else:
+        _rounded_rect(d, x0, y0, x1, y1, radius)
+
+def draw_eyes(state="idle"):
+    img = Image.new("1", (W, H))
+    d = ImageDraw.Draw(img)
+    _make_eyes(d, state)
     _draw_frame(img)
 
-# Mouth animation runs in a background thread while espeak is active
+# -----------------------
+# Mouth animation
+# Fixed to espeak's default rate (~160wpm), one beat per syllable (~0.15s)
+# -----------------------
 _speaking = False
 
 def _animate_mouth():
-    """Cycle through open/close mouth frames while _speaking is True."""
-    # Pattern: open amounts to cycle through for a natural talking rhythm
-    pattern = [0.2, 0.6, 1.0, 0.6, 0.2, 0.0,
-               0.3, 0.8, 1.0, 0.8, 0.3, 0.0]
+    # Each step in pattern = one MOUTH_BEAT_SEC interval
+    # Two steps per open/close cycle gives a natural lip-flap rhythm
+    pattern = [0.0, 1.0, 0.0, 1.0, 0.0, 0.8,
+               0.0, 1.0, 0.0, 0.6, 0.0, 1.0]
     i = 0
     while _speaking:
         img = Image.new("1", (W, H))
         d = ImageDraw.Draw(img)
-        _make_base(d)
-        _mouth_open(d, pattern[i % len(pattern)])
+        _make_eyes(d, "idle")
+        _draw_mouth(d, pattern[i % len(pattern)])
         _draw_frame(img)
         i += 1
-        time.sleep(0.08)  # ~12 fps
-    # Return to idle after done
+        time.sleep(MOUTH_BEAT_SEC)
     draw_eyes("idle")
 
 def speak(text: str):
@@ -129,7 +144,7 @@ def speak(text: str):
     _speaking = False
     anim_thread.join(timeout=0.5)
 
-    # Drain ~500ms of stale mic audio accumulated during TTS playback
+    # Drain ~500ms of stale mic audio accumulated during TTS
     drain_frames = int(500 / FRAME_MS)
     for _ in range(drain_frames):
         proc.stdout.read(FRAME_BYTES)
@@ -141,9 +156,18 @@ def speak(text: str):
 def gemini_reply(user_text: str) -> str:
     history.append(f"User: {user_text}")
     context = "\n".join(history)
-    prompt = f"You are a cute desk companion named {COMPANION_NAME}. Reply in 1–2 short sentences.\n{context}\nAssistant:"
-    r = gclient.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
-    reply = (r.text or "").strip()
+    prompt = (
+        f"You are a cute desk companion named {COMPANION_NAME}. "
+        f"Reply in 1–2 short sentences. "
+        f"Reply with plain text only — no markdown, no asterisks, no formatting of any kind.\n"
+        f"{context}\nAssistant:"
+    )
+    try:
+        r = gclient.models.generate_content(model="gemini-2.5-flash-lite", contents=prompt)
+        reply = (r.text or "").strip()
+    except Exception as e:
+        print(f"[Gemini error: {e}]")
+        reply = "Sorry, something went wrong."
     history.append(f"Assistant: {reply}")
     return reply
 
@@ -247,7 +271,6 @@ try:
     proc = start_arecord()
 
     while True:
-        # --- Waiting for wake word ---
         frame = proc.stdout.read(FRAME_BYTES)
         if not frame or len(frame) < FRAME_BYTES:
             time.sleep(0.01)
@@ -256,14 +279,13 @@ try:
         if not detect_wake(frame):
             continue
 
-        # --- Wake word detected: enter conversation mode ---
         wake_rec.Reset()
         draw_eyes("listening")
         history.clear()
 
         print(f"[Conversation started — will end after {CONVO_TIMEOUT_MS//1000}s of silence]")
 
-        while True:  # conversation loop
+        while True:
             try:
                 text = capture_utterance()
             except ConvoTimeout:
