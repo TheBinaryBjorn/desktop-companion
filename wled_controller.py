@@ -23,34 +23,35 @@ def scan_for_devices(timeout_seconds=4):
     print(f"[WLED Scanner] Scan complete. Devices ready: {list(discovered_wleds.keys())}")
 
 def control_wled(device_name: str, power_state: bool, brightness: int, r: int, g: int, b: int) -> str:
-    """
-    Controls a WLED light strip.
+    print(f"\n--- [DEBUG WLED] Tool Triggered by Gemini ---")
+    print(f"[DEBUG WLED] Target Device Name: '{device_name}'")
     
-    Args:
-        device_name: The name of the light (e.g., 'wled-kitchen').
-        power_state: True to turn on, False to turn off.
-        brightness: Integer from 1 to 255.
-        r: Red color value (0-255).
-        g: Green color value (0-255).
-        b: Blue color value (0-255).
-    """
     target_ip = discovered_wleds.get(device_name.lower())
+    print(f"[DEBUG WLED] Looked up IP: {target_ip}")
     
     if not target_ip:
+        print("[DEBUG WLED] STOPPING: Could not find IP for this device.")
         return f"Error: Device {device_name} not found on the network."
 
     url = f"http://{target_ip}/json/state"
     payload = {
         "on": power_state,
         "bri": brightness,
-        "seg": [{"col": [[r, g, b]]}]
+        "seg": [{"col": [[r, g, b]], "fx":0}]
     }
+    
+    print(f"[DEBUG WLED] Sending POST request to: {url}")
+    print(f"[DEBUG WLED] Payload: {payload}")
     
     try:
         response = requests.post(url, json=payload, timeout=3)
+        print(f"[DEBUG WLED] Response HTTP Status Code: {response.status_code}")
+        print(f"[DEBUG WLED] Response Text: {response.text}")
+        
         if response.status_code == 200:
             return f"Successfully updated {device_name}."
         else:
             return f"Failed to update {device_name}. Status: {response.status_code}"
     except Exception as e:
+        print(f"[DEBUG WLED] CRASH/TIMEOUT: {e}")
         return f"Network error when contacting {device_name}: {e}"
