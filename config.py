@@ -1,0 +1,23 @@
+# config.py
+COMPANION_NAME = "Jarvis"
+
+# Audio Settings
+MIC_DEVICE = "plughw:1,0"
+RATE = 16000
+SAMPLE_WIDTH = 2
+FRAME_MS = 30
+FRAME_BYTES = int(RATE * (FRAME_MS / 1000) * SAMPLE_WIDTH)
+
+# Voice Activity Detection (VAD) Settings
+END_SILENCE_MS = 600
+MIN_UTTERANCE_MS = 300
+MAX_UTTERANCE_MS = 8000
+CONVO_TIMEOUT_MS = 8000
+WAKE_PHRASES = [f"hey {COMPANION_NAME.lower()}", COMPANION_NAME.lower()]
+
+# Screen Settings
+MOUTH_BEAT_SEC = 0.02
+W, H = 128, 64
+
+# File Paths
+VOSK_MODEL_PATH = "/home/daniel/deskpet/models/vosk-model-small-en-us-0.15"
