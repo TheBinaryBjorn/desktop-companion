@@ -26,7 +26,7 @@ def start_new_chat():
         model="gemini-2.5-flash-lite",
         config=genai_types.GenerateContentConfig(
             system_instruction=system_instruction,
-            tools=[wled_controller.control_wled, music_controller.play_spotify] 
+            tools=[wled_controller.control_wled, music_controller.play_music] 
         )
     )
 
