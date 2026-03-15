@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types as genai_types
 import config
-import wled_controller
+import wled_controller, music_controller
 
 load_dotenv()
 gclient = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -26,7 +26,7 @@ def start_new_chat():
         model="gemini-2.5-flash-lite",
         config=genai_types.GenerateContentConfig(
             system_instruction=system_instruction,
-            tools=[wled_controller.control_wled] 
+            tools=[wled_controller.control_wled, music_controller.play_spotify] 
         )
     )
 
