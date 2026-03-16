@@ -1,14 +1,13 @@
 import os, time, config, screen, audio_out, mic_in, ai_logic, wled_controller
+import io # Added for type checking
 
 def main():
     # 1. Hardware Initialization
-    wled_controller.scan_for_devices()
     print(f"{config.COMPANION_NAME} (Pi Satellite) is active.")
     screen.draw_eyes("idle")
 
     proc = None
     try:
-        # Start the background mic listener
         proc = mic_in.start_arecord()
         
         while True:
@@ -20,31 +19,33 @@ def main():
             # 3. Trigger Active Listening
             mic_in.wake_rec.Reset()
             screen.draw_text("Listening...")
-            ai_logic.start_new_chat()
+            #ai_logic.start_new_chat()
 
-            # Continuous Conversation Loop
             while True:
                 try:
-                    # Records until silence and returns a local .wav path
-                    local_wav = mic_in.capture_utterance(proc)
+                    # NOW RETURNS: io.BytesIO object (RAM)
+                    local_wav_obj = mic_in.capture_utterance(proc)
                 except mic_in.ConvoTimeout:
                     print("Conversation timed out.")
                     screen.draw_eyes("idle")
                     break
 
-                if not local_wav: continue
+                if not local_wav_obj: continue
                 
                 screen.draw_text("Thinking...")
 
                 # --- TELEPORT TO VIVOBOOK ---
-                user_txt, ai_txt, reply_wav = ai_logic.process_voice_remote(local_wav)
+                # We pass the memory object, and it returns a memory object (reply_wav_obj)
+                user_txt, ai_txt, reply_wav_obj = ai_logic.process_voice_remote(local_wav_obj)
 
                 print(f"You: {user_txt}")
                 print(f"Jarvis: {ai_txt}")
 
-                # 4. Play the Piper response on Pi speakers
-                if reply_wav and os.path.exists(reply_wav):
-                    audio_out.play_file(reply_wav)
+                # 4. Play the Piper response
+                # We check if it's a BytesIO object instead of os.path.exists
+                if isinstance(reply_wav_obj, io.BytesIO):
+                    # You'll need to update audio_out.play_file to handle BytesIO
+                    audio_out.play_file(reply_wav_obj)
 
                 screen.draw_text("Listening...")
 
