@@ -54,7 +54,7 @@ def process_voice_pipeline(audio_base64: str) -> dict:
     print(f"User: {user_text}")
 
     response = ollama.chat(model='gemma3:1b', messages=[
-        {'role': 'system', 'content': 'You are Jarvis. Be brief.'},
+        {'role': 'system', 'content': 'You are Jarvis. A desktop companion. Keep your answers 2 sentence long max and with no special signs or emojis.'},
         {'role': 'user', 'content': user_text}
     ])
     ai_text = response['message']['content']
