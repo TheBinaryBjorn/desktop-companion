@@ -45,7 +45,7 @@ def main():
                 # We check if it's a BytesIO object instead of os.path.exists
                 if isinstance(reply_wav_obj, io.BytesIO):
                     # You'll need to update audio_out.play_file to handle BytesIO
-                    audio_out.play_file(reply_wav_obj)
+                    audio_out.play_file(reply_wav_obj, proc)
 
                 screen.draw_text("Listening...")
 
