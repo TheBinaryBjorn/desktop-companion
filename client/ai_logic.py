@@ -17,7 +17,7 @@ async def _call_brain(wav_io):
     # .getvalue() gets all the bytes from the BytesIO object
     encoded_input = base64.b64encode(wav_io.getvalue()).decode('utf-8')
 
-    url = f"http://{config.VIVOBOOK_IP}:8000/sse"
+    url = f"http://{config.VIVOBOOK_IP}:8000/mcp"
     
     async with sse_client(url) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
