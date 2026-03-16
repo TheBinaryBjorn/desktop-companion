@@ -2,6 +2,7 @@ import base64
 import asyncio
 import config
 import json
+import io
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
