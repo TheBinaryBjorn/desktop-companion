@@ -29,7 +29,10 @@ def main():
 
             # 3. Wake Word Detected!
             mic_in.wake_rec.Reset()
-            screen.draw_eyes("listening")
+
+            #screen.draw_eyes("listening")
+            screen.draw_text("Listening...")
+
             ai_logic.start_new_chat()
 
             print(f"[Conversation started — will end after {config.CONVO_TIMEOUT_MS//1000}s of silence]")
@@ -45,12 +48,14 @@ def main():
                     break
 
                 if not text:
-                    screen.draw_eyes("listening")
+                    #screen.draw_eyes("listening")
+                    screen.draw_text("Listening...")
                     continue
 
                 print("You:", text)
-                screen.draw_eyes("thinking")
-                
+                #screen.draw_eyes("thinking")
+                screen.draw_text("Thinking...")
+
                 # Talk to Gemini & Handle Tools
                 reply = ai_logic.get_reply(text)
                 print(f"{config.COMPANION_NAME}:", reply)
@@ -59,8 +64,9 @@ def main():
                 if reply:
                     audio_out.speak(reply, proc)
 
-                screen.draw_eyes("listening")
-
+                #screen.draw_eyes("listening")
+                screen.draw_text("Listening...")
+                
     except KeyboardInterrupt:
         pass
     finally:
