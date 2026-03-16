@@ -16,6 +16,9 @@ async def _call_brain(wav_io: io.BytesIO):
             "audio_base64": encoded_input
         })
 
-    data = json.loads(result[0].text)
+    print(f"DEBUG: {type(result)}")
+    print(f"DEBUG: {result}")
+
+    data = json.loads(result.content[0].text)
     reply_io = io.BytesIO(base64.b64decode(data["audio_base64"]))
     return data["user_text"], data["ai_text"], reply_io

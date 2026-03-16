@@ -1,27 +1,55 @@
 import os
 import base64
-import tempfile
 import ollama
 import whisper
 import subprocess
+import atexit
 from fastmcp import FastMCP
+import time
 
 mcp = FastMCP("Jarvis-Brain")
 
-print("Loading Whisper STT...")
-stt_model = whisper.load_model("base")
+print("Starting Ollama...")
+subprocess.Popen(
+    ["ollama", "serve"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+)
 
-PIPER_EXE = "C:/piper/piper.exe"
-VOICE_MODEL = "C:/piper/en_US-amy-medium.onnx"
+# Wait for Ollama to be ready
+print("Waiting for Ollama...")
+for i in range(10):
+    try:
+        ollama.list()
+        print("Ollama is ready.")
+        break
+    except Exception:
+        time.sleep(1)
+else:
+    print("Warning: Ollama may not be ready.")
+def shutdown():
+    print("Shutting down Ollama...")
+    subprocess.run("taskkill /F /IM ollama.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+atexit.register(shutdown)
+
+print("Loading Whisper STT...")
+stt_model = whisper.load_model("tiny")
+
+PIPER_EXE = r"C:\piper\piper.exe"
+VOICE_MODEL = r"C:\piper\en_US-amy-medium.onnx"
+INPUT_WAV = r"C:\piper\input.wav"
+OUTPUT_WAV = r"C:\piper\output.wav"
 
 @mcp.tool()
 def process_voice_pipeline(audio_base64: str) -> dict:
     """Receives Base64 audio, processes it, and returns Base64 speech."""
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_in:
-        input_wav = tmp_in.name
-        tmp_in.write(base64.b64decode(audio_base64))
+    print("Started process_voice")
+    with open(INPUT_WAV, "wb") as f:
+        f.write(base64.b64decode(audio_base64))
+    print("Opened base64 file")
 
-    result = stt_model.transcribe(input_wav)
+    result = stt_model.transcribe(INPUT_WAV)
     user_text = result["text"].strip()
     print(f"User: {user_text}")
 
@@ -32,18 +60,11 @@ def process_voice_pipeline(audio_base64: str) -> dict:
     ai_text = response['message']['content']
     print(f"Jarvis: {ai_text}")
 
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_out:
-        output_wav = tmp_out.name
+    command = f'"{PIPER_EXE}" -m "{VOICE_MODEL}" -f "{OUTPUT_WAV}"'
+    subprocess.run(command, input=ai_text, text=True, shell=True)
 
-    command = [PIPER_EXE, "-m", VOICE_MODEL, "-f", output_wav]
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, text=True)
-    process.communicate(input=ai_text)
-
-    with open(output_wav, "rb") as f:
+    with open(OUTPUT_WAV, "rb") as f:
         reply_audio_base64 = base64.b64encode(f.read()).decode('utf-8')
-
-    os.unlink(input_wav)
-    os.unlink(output_wav)
 
     return {
         "user_text": user_text,
