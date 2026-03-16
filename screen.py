@@ -77,11 +77,21 @@ def _animate_mouth():
         time.sleep(config.MOUTH_BEAT_SEC)
     draw_eyes("idle")
 
+def draw_text(text, size=12, x=0, y=0, clear_first=True):
+    img = Image.new("1",(config.W, config.H))
+    d = ImageDraw.Draw(img)
+    # Optional, add font later
+    d.text((x, y), text, fill=255)
+    _draw_frame(img)
+
 def start_talking():
+    """
     global _speaking, _anim_thread
     _speaking = True
     _anim_thread = threading.Thread(target=_animate_mouth, daemon=True)
     _anim_thread.start()
+    """
+    draw_text("Talking...")
 
 def stop_talking():
     global _speaking, _anim_thread
