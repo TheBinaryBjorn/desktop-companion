@@ -25,7 +25,7 @@ class ollama_service(llm_service):
 
     def _prewarm(self):
         print("Pre-warming Ollama...")
-        ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': 'hi'}])
+        ollama.chat(model=config.LLM_MODEL, messages=[{'role': 'user', 'content': 'hi'}])
         print("Ready.")
 
     def send_prompt(self, prompt):

@@ -5,7 +5,7 @@ STT_COMPUTE_TYPE="int8"
 
 # LLM CONFIG
 LLM_MODEL="gemma3:1b"
-LLM_SYSTEM_PROMPT="You are Jarvis. Be brief. One or two sentences max. No special characters."
+LLM_SYSTEM_PROMPT="You are Jarvis. Reply in 2 sentences max and english characters only. No exceptions"
 MAX_HISTORY_LENGTH=5
 
 # TTS CONFIG
