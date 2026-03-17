@@ -1,7 +1,7 @@
 import base64
 import time
 import ollama
-import whisper
+from faster_whisper import WhisperModel
 import subprocess
 import atexit
 from fastapi import FastAPI
@@ -15,8 +15,12 @@ print("Starting Ollama...")
 subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(2)
 
+print("Pre-warming Ollama...")
+ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': 'hi'}])
+print("Ready.")
+
 print("Loading Whisper STT...")
-stt_model = whisper.load_model("tiny")
+stt_model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
 PIPER_EXE = r"C:\piper\piper.exe"
 VOICE_MODEL = r"C:\piper\en_US-amy-medium.onnx"
@@ -79,8 +83,8 @@ def process_voice(req: AudioRequest):
         f.write(base64.b64decode(req.audio_base64))
 
     # 2. Transcribe
-    result = stt_model.transcribe(INPUT_WAV)
-    user_text = result["text"].strip()
+    segments, _ = stt_model.transcribe(INPUT_WAV)
+    user_text = "".join([seg.text for seg in segments]).strip()
     print(f"User: {user_text}")
 
     # 3. Stream raw PCM audio back

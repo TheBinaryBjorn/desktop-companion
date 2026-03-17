@@ -1,5 +1,5 @@
-import base64
-import httpx
+import asyncio
+import websockets
 import pyaudio
 import config
 import io
@@ -7,32 +7,54 @@ import io
 CHUNK_SIZE = 4096
 SAMPLE_RATE = 22050
 CHANNELS = 1
-SAMPLE_WIDTH = 2  # 16-bit
 
 def process_voice_remote(wav_io: io.BytesIO) -> tuple:
-    encoded_input = base64.b64encode(wav_io.getvalue()).decode('utf-8')
+    return asyncio.run(_stream_to_server(wav_io))
 
-    p = pyaudio.PyAudio()
-    stream = p.open(
-        format=pyaudio.paInt16,
-        channels=CHANNELS,
-        rate=SAMPLE_RATE,
-        output=True
-    )
+async def _stream_to_server(wav_io: io.BytesIO) -> tuple:
+    uri = f"ws://{config.VIVOBOOK_IP}:8000/stream"
 
-    user_text = ""
-    with httpx.stream(
-        "POST",
-        f"http://{config.VIVOBOOK_IP}:8000/process",
-        json={"audio_base64": encoded_input},
-        timeout=30.0
-    ) as response:
-        user_text = response.headers.get("X-User-Text", "")
-        for chunk in response.iter_bytes(chunk_size=CHUNK_SIZE):
-            stream.write(chunk)
+    async with websockets.connect(uri) as ws:
+        # 1. Extract raw PCM from WAV (skip 44-byte header)
+        wav_io.seek(44)
+        pcm = wav_io.read()
 
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+        # 2. Stream PCM in chunks — this already happened during speech
+        #    so network transfer is near-instant from Pi's perspective
+        chunk_size = 4096
+        for i in range(0, len(pcm), chunk_size):
+            await ws.send(pcm[i:i+chunk_size])
 
-    return user_text, "", None  # ai_text and reply_io no longer needed
+        # 3. Signal end of speech
+        await ws.send("done")
+
+        # 4. Wait for transcript
+        user_text = ""
+        msg = await ws.recv()
+        if isinstance(msg, str) and msg.startswith("transcript:"):
+            user_text = msg[len("transcript:"):]
+
+        # 5. Play audio as it streams in
+        p = pyaudio.PyAudio()
+        stream = p.open(
+            format=pyaudio.paInt16,
+            channels=CHANNELS,
+            rate=SAMPLE_RATE,
+            output=True
+        )
+
+        while True:
+            msg = await ws.recv()
+            if isinstance(msg, str) and msg == "audio_done":
+                break
+            if isinstance(msg, bytes):
+                stream.write(msg)
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+        return user_text, "", None
+
+def process_voice_remote(wav_io: io.BytesIO) -> tuple:
+    return asyncio.run(_stream_to_server(wav_io))
