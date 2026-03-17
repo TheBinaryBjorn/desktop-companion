@@ -1,15 +1,11 @@
-import base64
 import time
 import ollama
 from faster_whisper import WhisperModel
 import subprocess
 import atexit
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-import uvicorn
-
-app = FastAPI()
+import asyncio
+import wave
+import websockets
 
 print("Starting Ollama...")
 subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -32,72 +28,85 @@ def shutdown():
 
 atexit.register(shutdown)
 
-class AudioRequest(BaseModel):
-    audio_base64: str
+def pcm_to_wav(pcm: bytes, rate: int = 16000) -> str:
+    with wave.open(INPUT_WAV, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(pcm)
+    return INPUT_WAV
 
-def generate_audio_stream(user_text: str):
-    """Stream PCM audio chunks from Piper as Ollama generates tokens."""
-    piper_proc = subprocess.Popen(
-        [PIPER_EXE, "-m", VOICE_MODEL, "--output-raw"],  # raw PCM to stdout
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=False
-    )
+async def handle_client(ws):
+    print("Client connected.")
+    pcm_buffer = bytearray()
 
-    # Feed Ollama tokens into Piper in a separate thread
-    import threading
+    try:
+        async for message in ws:
+            if isinstance(message, bytes):
+                pcm_buffer.extend(message)
 
-    def feed_piper():
-        stream = ollama.chat(
-            model='gemma3:1b',
-            messages=[
-                {'role': 'system', 'content': 'You are Jarvis. Be brief. One or two sentences max.'},
-                {'role': 'user', 'content': user_text}
-            ],
-            stream=True
-        )
-        for chunk in stream:
-            token = chunk['message']['content']
-            piper_proc.stdin.write(token.encode())
-            piper_proc.stdin.flush()
-        piper_proc.stdin.close()
+            elif isinstance(message, str) and message == "done":
+                # 1. Transcribe
+                loop = asyncio.get_event_loop()
+                wav_path = pcm_to_wav(bytes(pcm_buffer))
 
-    feeder = threading.Thread(target=feed_piper)
-    feeder.start()
+                def transcribe():
+                    segments, _ = stt_model.transcribe(wav_path)
+                    return "".join([seg.text for seg in segments]).strip()
 
-    # Stream raw PCM chunks back to Pi as they come out of Piper
-    while True:
-        chunk = piper_proc.stdout.read(4096)
-        if not chunk:
-            break
-        yield chunk
+                user_text = await loop.run_in_executor(None, transcribe)
+                print(f"User: {user_text}")
 
-    feeder.join()
-    piper_proc.wait()
+                # 2. Send transcript
+                await ws.send(f"transcript:{user_text}")
 
-@app.post("/process")
-def process_voice(req: AudioRequest):
-    # 1. Decode and save audio
-    with open(INPUT_WAV, "wb") as f:
-        f.write(base64.b64decode(req.audio_base64))
+                # 3. Start Piper
+                piper_proc = subprocess.Popen(
+                    [PIPER_EXE, "-m", VOICE_MODEL, "--output-raw"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
 
-    # 2. Transcribe
-    segments, _ = stt_model.transcribe(INPUT_WAV)
-    user_text = "".join([seg.text for seg in segments]).strip()
-    print(f"User: {user_text}")
+                # 4. Feed Ollama tokens into Piper in background
+                async def feed_piper():
+                    stream = ollama.chat(
+                        model='gemma3:1b',
+                        messages=[
+                            {'role': 'system', 'content': 'You are Jarvis. Be brief. One or two sentences max.'},
+                            {'role': 'user', 'content': user_text}
+                        ],
+                        stream=True
+                    )
+                    full = ""
+                    for chunk in stream:
+                        token = chunk['message']['content']
+                        full += token
+                        piper_proc.stdin.write(token.encode())
+                        piper_proc.stdin.flush()
+                    piper_proc.stdin.close()
+                    print(f"Jarvis: {full}")
 
-    # 3. Stream raw PCM audio back
-    return StreamingResponse(
-        generate_audio_stream(user_text),
-        media_type="audio/raw",
-        headers={
-            "X-Sample-Rate": "22050",
-            "X-Channels": "1",
-            "X-Sample-Width": "2",
-            "X-User-Text": user_text
-        }
-    )
+                asyncio.create_task(feed_piper())
+
+                # 5. Stream Piper audio back
+                while True:
+                    chunk = await loop.run_in_executor(None, piper_proc.stdout.read, 4096)
+                    if not chunk:
+                        break
+                    await ws.send(chunk)
+
+                # 6. Signal done
+                await ws.send("audio_done")
+                pcm_buffer.clear()
+
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected.")
+
+async def main():
+    print("Server ready on ws://0.0.0.0:8000")
+    async with websockets.serve(handle_client, "0.0.0.0", 8000):
+        await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    asyncio.run(main())
