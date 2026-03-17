@@ -1,3 +1,11 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv() # Load variables from .env
+
+# Fallback to localhost if the variable isn't found
+VIVOBOOK_IP = os.getenv("VIVOBOOK_IP", "127.0.0.1")
+
 # config.py
 COMPANION_NAME = "Jarvis"
 
@@ -20,4 +28,4 @@ MOUTH_BEAT_SEC = 0.02
 W, H = 128, 64
 
 # File Paths
-VOSK_MODEL_PATH = "/home/daniel/deskpet/models/vosk-model-small-en-us-0.15"
+VOSK_MODEL_PATH = "/home/daniel/deskpet/client/models/vosk-model-small-en-us-0.15"

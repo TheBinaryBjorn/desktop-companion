@@ -1,5 +1,7 @@
 # mic_in.py
 import sys, types
+import io
+import wave
 
 # Mock pkg_resources for Vosk performance on Pi
 if "pkg_resources" not in sys.modules:
@@ -49,7 +51,8 @@ def transcribe_vosk(pcm: bytes) -> str:
         rec.AcceptWaveform(pcm[i:i+4000])
     return json.loads(rec.FinalResult()).get("text", "").strip()
 
-def capture_utterance(proc) -> str | None:
+
+def capture_utterance(proc) -> io.BytesIO | None:
     speech = bytearray()
     in_speech = False
     silence_ms, utter_ms, idle_ms = 0, 0, 0
@@ -87,7 +90,17 @@ def capture_utterance(proc) -> str | None:
     if utter_ms < config.MIN_UTTERANCE_MS:
         return None
 
-    screen.draw_eyes("thinking")
-    text = transcribe_vosk(bytes(speech)).strip()
-    screen.draw_eyes("listening")
-    return text or None
+    # --- IN-MEMORY WAV CREATION ---
+    # Create a byte stream in RAM
+    wav_io = io.BytesIO()
+    
+    with wave.open(wav_io, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(config.RATE)
+        wf.writeframes(bytes(speech))
+    
+    # Seek to the start so the next function can read it from the beginning
+    wav_io.seek(0)
+    
+    return wav_io
