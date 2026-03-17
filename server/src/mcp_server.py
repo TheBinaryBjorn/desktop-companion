@@ -1,27 +1,26 @@
-import os
-import base64
 import time
 import ollama
-import whisper
+from faster_whisper import WhisperModel
 import subprocess
 import atexit
-from fastapi import FastAPI
-from pydantic import BaseModel
-import uvicorn
-
-app = FastAPI()
+import asyncio
+import wave
+import websockets
 
 print("Starting Ollama...")
 subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(2)
 
+print("Pre-warming Ollama...")
+ollama.chat(model='gemma3:1b', messages=[{'role': 'user', 'content': 'hi'}])
+print("Ready.")
+
 print("Loading Whisper STT...")
-stt_model = whisper.load_model("tiny")
+stt_model = WhisperModel("tiny", device="cpu", compute_type="int8")
 
 PIPER_EXE = r"C:\piper\piper.exe"
 VOICE_MODEL = r"C:\piper\en_US-amy-medium.onnx"
 INPUT_WAV = r"C:\piper\input.wav"
-OUTPUT_WAV = r"C:\piper\output.wav"
 
 def shutdown():
     print("Shutting down Ollama...")
@@ -29,56 +28,99 @@ def shutdown():
 
 atexit.register(shutdown)
 
-class AudioRequest(BaseModel):
-    audio_base64: str
+def pcm_to_wav(pcm: bytes, rate: int = 16000) -> str:
+    with wave.open(INPUT_WAV, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(pcm)
+    return INPUT_WAV
 
-@app.post("/process")
-def process_voice(req: AudioRequest):
-    # 1. Decode and save audio
-    with open(INPUT_WAV, "wb") as f:
-        f.write(base64.b64decode(req.audio_base64))
+async def handle_client(ws):
+    print("Client connected.")
+    pcm_buffer = bytearray()
 
-    # 2. Transcribe
-    result = stt_model.transcribe(INPUT_WAV)
-    user_text = result["text"].strip()
-    print(f"User: {user_text}")
+    try:
+        async for message in ws:
+            if isinstance(message, bytes):
+                pcm_buffer.extend(message)
 
-    # 3. Stream Ollama tokens directly into Piper stdin
-    piper_proc = subprocess.Popen(
-        [PIPER_EXE, "-m", VOICE_MODEL, "-f", OUTPUT_WAV],
-        stdin=subprocess.PIPE,
-        text=True
-    )
+            elif isinstance(message, str) and message == "done":
+                t_start = time.time()
 
-    full_response = ""
-    stream = ollama.chat(
-        model='gemma3:1b',
-        messages=[
-            {'role': 'system', 'content': 'You are Jarvis. Be brief. One or two sentences max.'},
-            {'role': 'user', 'content': user_text}
-        ],
-        stream=True
-    )
+                # 1. Transcribe
+                loop = asyncio.get_event_loop()
+                pcm_to_wav(bytes(pcm_buffer))
 
-    for chunk in stream:
-        token = chunk['message']['content']
-        full_response += token
-        piper_proc.stdin.write(token)
-        piper_proc.stdin.flush()
+                def transcribe():
+                    segments, _ = stt_model.transcribe(INPUT_WAV)
+                    return "".join([seg.text for seg in segments]).strip()
 
-    piper_proc.stdin.close()
-    piper_proc.wait()
-    print(f"Jarvis: {full_response}")
+                user_text = await loop.run_in_executor(None, transcribe)
+                t_whisper = time.time()
+                print(f"[{t_whisper-t_start:.2f}s] Whisper done: '{user_text}'")
 
-    # 4. Encode and return audio + transcripts
-    with open(OUTPUT_WAV, "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode('utf-8')
+                # 2. Send transcript
+                await ws.send(f"transcript:{user_text}")
 
-    return {
-        "user_text": user_text,
-        "ai_text": full_response,
-        "audio_base64": audio_b64
-    }
+                # 3. Start Piper
+                piper_proc = subprocess.Popen(
+                    [PIPER_EXE, "-m", VOICE_MODEL, "--output-raw"],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL
+                )
+
+                # 4. Feed Ollama tokens into Piper in background
+                t_ollama_ref = [t_whisper]
+                first_token_logged = [False]
+
+                async def feed_piper():
+                    stream = ollama.chat(
+                        model='gemma3:1b',
+                        messages=[
+                            {'role': 'system', 'content': 'You are Jarvis. Be brief. One or two sentences max.'},
+                            {'role': 'user', 'content': user_text}
+                        ],
+                        stream=True
+                    )
+                    full = ""
+                    for chunk in stream:
+                        token = chunk['message']['content']
+                        if not first_token_logged[0]:
+                            print(f"[{time.time()-t_ollama_ref[0]:.2f}s] Ollama first token")
+                            first_token_logged[0] = True
+                        full += token
+                        piper_proc.stdin.write(token.encode())
+                        piper_proc.stdin.flush()
+                    piper_proc.stdin.close()
+                    print(f"[{time.time()-t_start:.2f}s total] Jarvis: {full}")
+
+                asyncio.create_task(feed_piper())
+
+                # 5. Stream Piper audio back
+                first_chunk_logged = False
+                while True:
+                    chunk = await loop.run_in_executor(None, piper_proc.stdout.read, 4096)
+                    if not chunk:
+                        break
+                    if not first_chunk_logged:
+                        print(f"[{time.time()-t_start:.2f}s] First audio chunk sent")
+                        first_chunk_logged = True
+                    await ws.send(chunk)
+
+                # 6. Signal done
+                await ws.send("audio_done")
+                print(f"[{time.time()-t_start:.2f}s total] Audio stream complete")
+                pcm_buffer.clear()
+
+    except websockets.exceptions.ConnectionClosed:
+        print("Client disconnected.")
+
+async def main():
+    print("Server ready on ws://0.0.0.0:8000")
+    async with websockets.serve(handle_client, "0.0.0.0", 8000):
+        await asyncio.Future()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    asyncio.run(main())
