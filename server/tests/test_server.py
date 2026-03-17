@@ -2,7 +2,7 @@ import pytest
 import os
 from unittest.mock import MagicMock, patch
 from fastmcp import Client
-from mcp_server import mcp
+from server import mcp
 
 @pytest.fixture
 async def mcp_client():
