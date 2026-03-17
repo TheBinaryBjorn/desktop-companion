@@ -11,7 +11,11 @@ _ws = None
 
 async def _ensure_connected():
     global _ws
-    if _ws is None or _ws.closed:
+    try:
+        if _ws is None:
+            raise Exception("No connection")
+        await _ws.ping()  # will raise if connection is dead
+    except Exception:
         print("Connecting to server...")
         _ws = await websockets.connect(f"ws://{config.VIVOBOOK_IP}:8000")
         print("Connected.")
