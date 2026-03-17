@@ -7,13 +7,21 @@ import io
 SAMPLE_RATE = 22050
 CHANNELS = 1
 
-def process_voice_remote(wav_io: io.BytesIO) -> tuple:
-    return asyncio.run(_stream_to_server(wav_io))
+_ws = None
+
+async def _ensure_connected():
+    global _ws
+    if _ws is None or _ws.closed:
+        print("Connecting to server...")
+        _ws = await websockets.connect(f"ws://{config.VIVOBOOK_IP}:8000")
+        print("Connected.")
+    return _ws
 
 async def _stream_to_server(wav_io: io.BytesIO) -> tuple:
-    uri = f"ws://{config.VIVOBOOK_IP}:8000"
+    global _ws
+    ws = await _ensure_connected()
 
-    async with websockets.connect(uri) as ws:
+    try:
         # 1. Extract raw PCM (skip 44-byte WAV header)
         wav_io.seek(44)
         pcm = wav_io.read()
@@ -53,3 +61,11 @@ async def _stream_to_server(wav_io: io.BytesIO) -> tuple:
         p.terminate()
 
         return user_text, "", None
+
+    except websockets.exceptions.ConnectionClosed:
+        print("Connection lost, will reconnect on next call.")
+        _ws = None
+        return "", "", None
+
+def process_voice_remote(wav_io: io.BytesIO) -> tuple:
+    return asyncio.run(_stream_to_server(wav_io))

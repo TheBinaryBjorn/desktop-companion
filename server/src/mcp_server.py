@@ -46,16 +46,19 @@ async def handle_client(ws):
                 pcm_buffer.extend(message)
 
             elif isinstance(message, str) and message == "done":
+                t_start = time.time()
+
                 # 1. Transcribe
                 loop = asyncio.get_event_loop()
-                wav_path = pcm_to_wav(bytes(pcm_buffer))
+                pcm_to_wav(bytes(pcm_buffer))
 
                 def transcribe():
-                    segments, _ = stt_model.transcribe(wav_path)
+                    segments, _ = stt_model.transcribe(INPUT_WAV)
                     return "".join([seg.text for seg in segments]).strip()
 
                 user_text = await loop.run_in_executor(None, transcribe)
-                print(f"User: {user_text}")
+                t_whisper = time.time()
+                print(f"[{t_whisper-t_start:.2f}s] Whisper done: '{user_text}'")
 
                 # 2. Send transcript
                 await ws.send(f"transcript:{user_text}")
@@ -69,6 +72,9 @@ async def handle_client(ws):
                 )
 
                 # 4. Feed Ollama tokens into Piper in background
+                t_ollama_ref = [t_whisper]
+                first_token_logged = [False]
+
                 async def feed_piper():
                     stream = ollama.chat(
                         model='gemma3:1b',
@@ -81,23 +87,31 @@ async def handle_client(ws):
                     full = ""
                     for chunk in stream:
                         token = chunk['message']['content']
+                        if not first_token_logged[0]:
+                            print(f"[{time.time()-t_ollama_ref[0]:.2f}s] Ollama first token")
+                            first_token_logged[0] = True
                         full += token
                         piper_proc.stdin.write(token.encode())
                         piper_proc.stdin.flush()
                     piper_proc.stdin.close()
-                    print(f"Jarvis: {full}")
+                    print(f"[{time.time()-t_start:.2f}s total] Jarvis: {full}")
 
                 asyncio.create_task(feed_piper())
 
                 # 5. Stream Piper audio back
+                first_chunk_logged = False
                 while True:
                     chunk = await loop.run_in_executor(None, piper_proc.stdout.read, 4096)
                     if not chunk:
                         break
+                    if not first_chunk_logged:
+                        print(f"[{time.time()-t_start:.2f}s] First audio chunk sent")
+                        first_chunk_logged = True
                     await ws.send(chunk)
 
                 # 6. Signal done
                 await ws.send("audio_done")
+                print(f"[{time.time()-t_start:.2f}s total] Audio stream complete")
                 pcm_buffer.clear()
 
     except websockets.exceptions.ConnectionClosed:
@@ -106,7 +120,7 @@ async def handle_client(ws):
 async def main():
     print("Server ready on ws://0.0.0.0:8000")
     async with websockets.serve(handle_client, "0.0.0.0", 8000):
-        await asyncio.Future()  # run forever
+        await asyncio.Future()
 
 if __name__ == "__main__":
     asyncio.run(main())
