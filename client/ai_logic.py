@@ -8,13 +8,14 @@ SAMPLE_RATE = 22050
 CHANNELS = 1
 
 _ws = None
+_loop = asyncio.new_event_loop()
 
 async def _ensure_connected():
     global _ws
     try:
         if _ws is None:
             raise Exception("No connection")
-        await _ws.ping()  # will raise if connection is dead
+        await _ws.ping()
     except Exception:
         print("Connecting to server...")
         _ws = await websockets.connect(f"ws://{config.VIVOBOOK_IP}:8000")
@@ -72,4 +73,4 @@ async def _stream_to_server(wav_io: io.BytesIO) -> tuple:
         return "", "", None
 
 def process_voice_remote(wav_io: io.BytesIO) -> tuple:
-    return asyncio.run(_stream_to_server(wav_io))
+    return _loop.run_until_complete(_stream_to_server(wav_io))
