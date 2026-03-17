@@ -41,23 +41,31 @@ async def handle_client(ws):
                 loop = asyncio.get_event_loop()
 
                 audio_np = np.frombuffer(pcm_buffer, dtype=np.int16).astype(np.float32) / 32768.0
+                #Whisper is CPU bound, therefor running in the executor.
                 user_text =  await loop.run_in_executor(None, stt_model.transcribe, audio_np)
 
                 t_whisper = time.time()
                 print(f"[{t_whisper-t_start:.2f}s] Whisper done: '{user_text}'")
 
                 # 2. Send transcript - why?
-                #await ws.send(f"transcript:{user_text}")
+                await ws.send(f"transcript:{user_text}")
+                
                 # 3. Start synthesis and get Piper process
-                tts_proc = await tts_model.synthesize_stream(llm_model.send_prompt(user_text))
+                t_sythesis_start = time.time()
+                tts_proc, feed_task = await tts_model.synthesize_stream(llm_model.send_prompt(user_text), llm_model)
+                t_synthesis_end = time.time()
+                print(f"[{t_synthesis_end-t_sythesis_start:.2f}s] Piper done.")
 
                 # 4. Stream Piper audio back
-                await stream_service.stream_to_client(ws, loop, tts_proc)
+                t_stream_start = time.time()
+                await stream_service.stream_to_client(ws, loop, tts_proc, feed_task)
 
-                # 6. Signal done
+                # 5. Signal done
                 await ws.send("audio_done")
-                print(f"[{time.time()-t_start:.2f}s total] Audio stream complete")
+                print(f"[{time.time()-t_stream_start:.2f}s] Audio stream complete")
+
                 pcm_buffer.clear()
+                print(f"[{time.time()-t_start:.2f}s] Total time.")
 
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected.")

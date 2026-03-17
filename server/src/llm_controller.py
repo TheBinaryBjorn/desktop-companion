@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import deque
 import config, time, subprocess, ollama
 
 class llm_service(ABC):
@@ -13,6 +14,9 @@ class llm_service(ABC):
         pass
 
 class ollama_service(llm_service):
+    def __init__(self):
+        self.history = deque(maxlen=config.MAX_HISTORY_LENGTH)
+
     def start_service(self):
         print("Starting Ollama...")
         subprocess.Popen(["ollama", "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -26,13 +30,22 @@ class ollama_service(llm_service):
 
     def send_prompt(self, prompt):
         # Try to send a message, raise exception if failed
-        return ollama.chat(
+        self.history.append({'role' : 'user', 'content' : prompt})
+
+        stream = ollama.chat(
                         model=config.LLM_MODEL,
                         messages=[
                             {'role': 'system', 'content': config.LLM_SYSTEM_PROMPT},
-                            {'role': 'user', 'content': prompt}
+                            *self.history
                         ],
                         stream=True
                     )
+        return stream
+    
+    def save_response(self, response: str):
+        self.history.append({'role': 'assistant', 'content': response})
+
+    def reset_history(self):
+        self.history.clear()
         
         
