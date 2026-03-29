@@ -6,6 +6,7 @@ class JarvisState(Enum):
     LISTENING = auto()
     THINKING = auto()
     SPEAKING = auto()
+    ERROR = auto()
 
 """
 This is a singleton class to manage the states of Jarvis across multiple threads.
