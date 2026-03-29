@@ -1,12 +1,13 @@
 import pyaudio
 from state_manager import JarvisState
+from config import RATE
 
 def speaker_loop(brain, playback_queue):
     audio = pyaudio.PyAudio()
 
     stream = audio.open(format=pyaudio.paInt16,
                         channels=1,
-                        rate=24000,
+                        rate=RATE,
                         output=True)
     
     while True:
