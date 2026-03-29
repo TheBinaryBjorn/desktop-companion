@@ -1,4 +1,4 @@
-import pyaudio
+import pyaudio, time
 from state_manager import JarvisState
 
 def speaker_loop(brain, playback_queue):
@@ -13,6 +13,7 @@ def speaker_loop(brain, playback_queue):
         audio_data = playback_queue.get()
 
         if audio_data == b'EOF':
+            time.sleep(0.5)
             brain.set_state(JarvisState.LISTENING)
         else:
             stream.write(audio_data)
