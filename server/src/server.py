@@ -1,3 +1,10 @@
+import os
+
+base = os.path.join(os.path.dirname(__file__), ".venv", "Lib", "site-packages")
+os.add_dll_directory(os.path.join(base, "nvidia", "cublas", "bin"))
+os.add_dll_directory(os.path.join(base, "nvidia", "cudnn", "bin"))
+os.add_dll_directory(os.path.join(base, "ctranslate2"))
+
 import time
 
 from llm_controller import ollama_service
@@ -17,6 +24,8 @@ llm_model.start_service()
 stt_model = faster_whisper_service()
 tts_model = piper_service()
 stream_service = websocket_stream_service()
+
+
 
 # TO LLM CONTROLLER -----------------------------
 def shutdown():
