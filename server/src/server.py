@@ -35,8 +35,9 @@ atexit.register(shutdown)
 # -----------------------------------------------
 
 async def handle_client(ws):
-    if ws.path != "/stream":
+    if ws.request.path != "/stream":
         print(f"Rejected connection to {ws.path}")
+        await ws.close(1011, "Invalid endpoint")
         return
     print("Client connected.")
     pcm_buffer = bytearray()
