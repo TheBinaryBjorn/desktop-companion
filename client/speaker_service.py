@@ -6,7 +6,7 @@ def speaker_loop(brain, playback_queue):
 
     stream = audio.open(format=pyaudio.paInt16,
                         channels=1,
-                        rate=18500,
+                        rate=22050,
                         output=True)
     
     while True:
