@@ -13,17 +13,27 @@ async def network_task(brain, audio_queue, playback_queue):
 
                     async def receive_handler():
                         first_chunk_received = False
-                        async for message in ws:
-                            if isinstance(message, bytes):
-                                if not first_chunk_received:
-                                    brain.set_state(JarvisState.SPEAKING)
-                                    first_chunk_received = True
-                                playback_queue.put(message)
-                            elif isinstance(message, str):
-                                payload = json.loads(message)
-                                if payload.get("type") == "eof":
-                                    playback_queue.put(b'EOF')
-                                    first_chunk_received = False
+                        while True:
+                            try:
+                                
+                                message = await asyncio.wait_for(ws.recv(), timeout=10.0)
+                                if isinstance(message, bytes):
+                                    if not first_chunk_received:
+                                        brain.set_state(JarvisState.SPEAKING)
+                                        first_chunk_received = True
+                                    playback_queue.put(message)
+                                elif isinstance(message, str):
+                                    payload = json.loads(message)
+                                    if payload.get("type") == "eof":
+                                        playback_queue.put(b'EOF')
+                                        first_chunk_received = False
+                            except asyncio.TimeoutError:
+                                if brain.state == JarvisState.THINKING:
+                                    print("Server response timeout! Returning to IDLE.")
+                                    brain.set_state(JarvisState.IDLE)
+                                    while not playback_queue.empty():
+                                        playback_queue.get()
+                                continue
 
                     async def send_handler():
                         loop = asyncio.get_event_loop()
