@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv() # Load variables from .env
 
 # Fallback to localhost if the variable isn't found
-VIVOBOOK_IP = os.getenv("VIVOBOOK_IP", "127.0.0.1")
+SERVER_IP = os.getenv("SERVER_IP", "127.0.0.1")
 
 # config.py
 COMPANION_NAME = "Jarvis"
