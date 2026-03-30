@@ -1,8 +1,17 @@
 # mic_service.py
-import json, pyaudio, wave, webrtcvad, time
+import json, pyaudio, wave, time, numpy as np
 from vosk import Model, KaldiRecognizer
+from silero_vad_lite import SileroVAD
 from state_manager import JarvisState
 from config import VOSK_MODEL_PATH, RATE
+
+def detect_speech(vad, data):
+    # Convert Int16 Bytes to Float32
+    audio_int16 = np.frombuffer(data, dtype=np.int16)[:512]
+    audio_float32 = audio_int16.astype(np.float32) / 32768.0
+
+    speech_prob = vad.process(audio_float32)
+    return speech_prob > 0.5
 
 def load_feedback_sound_bytes():
     with wave.open("sounds/wakeword_feedback_sound.wav", 'rb') as wf:
@@ -15,7 +24,7 @@ def play_wakeword_feedback(playback_queue, sound_bytes):
 def mic_loop(brain, audio_queue, playback_queue):
     model = Model(VOSK_MODEL_PATH)
     recognizer = KaldiRecognizer(model, RATE)
-    vad = webrtcvad.Vad(2)
+    vad = SileroVAD(sample_rate=RATE)
     audio = pyaudio.PyAudio()
 
     stream = audio.open(format=pyaudio.paInt16,
@@ -51,7 +60,7 @@ def mic_loop(brain, audio_queue, playback_queue):
                 just_entered_listening = False
 
             # Detect if the user spoke.
-            is_speech = vad.is_speech(data, RATE)
+            is_speech = detect_speech(vad, data)
 
             if is_speech:
                 user_voice_detected = True
@@ -62,6 +71,7 @@ def mic_loop(brain, audio_queue, playback_queue):
             # If end of speech is detected, reset and switch state to thinking.
             if recognizer.AcceptWaveform(data):
                 recognizer.Reset()
+                user_voice_detected = False
                 just_entered_listening = True
                 audio_queue.put(b'EOF')
                 brain.set_state(JarvisState.THINKING)
