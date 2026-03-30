@@ -16,7 +16,7 @@ def main():
 
     # Define the threads
     t_screen = threading.Thread(target=screen_loop, args=(brain,), daemon=True)
-    t_mic = threading.Thread(target=mic_loop, args=(brain, audio_queue), daemon=True)
+    t_mic = threading.Thread(target=mic_loop, args=(brain, audio_queue, playback_queue), daemon=True)
     t_net = threading.Thread(target=network_loop, args=(brain, audio_queue, playback_queue), daemon=True)
     t_speaker = threading.Thread(target=speaker_loop, args=(brain, playback_queue), daemon=True)
 
