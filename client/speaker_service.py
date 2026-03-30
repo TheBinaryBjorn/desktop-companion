@@ -13,7 +13,7 @@ def speaker_loop(brain, playback_queue):
         audio_data = playback_queue.get()
 
         if audio_data == b'EOF':
-            time.sleep(1)
+            time.sleep(0.3)
             brain.set_state(JarvisState.LISTENING)
         else:
             stream.write(audio_data)
