@@ -1,15 +1,12 @@
 # mic_service.py
-import json, pyaudio, numpy as np
+import json, pyaudio, numpy as np, wave
 from vosk import Model, KaldiRecognizer
 from state_manager import JarvisState
 from config import VOSK_MODEL_PATH, RATE
 
-def calculate_feedback_sound_bytes():
-    duration = 0.2
-    t = np.linspace(0, duration, int(22050*duration), False)
-    tone = 1e4 * np.sin(2 * np.pi * 440 * t)
-    beep_bytes = tone.astype(np.int16).tobytes()
-    return beep_bytes
+def load_feedback_sound_bytes():
+    with wave.open("sounds/wakeword_feedback_sound.wav", 'rb') as wf:
+        return wf.readframes(wf.getnframes())
 
 def play_wakeword_feedback(playback_queue, sound_bytes):
     playback_queue.put(sound_bytes)
@@ -27,7 +24,7 @@ def mic_loop(brain, audio_queue, playback_queue):
                         input=True,
                         frames_per_buffer=2000)
     stream.start_stream()
-    beep_bytes = calculate_feedback_sound_bytes()
+    beep_bytes = load_feedback_sound_bytes()
     print("[Mic Thread]: Ready!")
     while True:
         data = stream.read(2000, exception_on_overflow=False)
