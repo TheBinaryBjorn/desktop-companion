@@ -18,6 +18,7 @@ def mic_loop(brain, audio_queue):
                         input=True,
                         frames_per_buffer=2000)
     stream.start_stream()
+    print("[Mic Thread]: Ready!")
     while True:
         data = stream.read(2000, exception_on_overflow=False)
         # IDLE or SPEAKING State
