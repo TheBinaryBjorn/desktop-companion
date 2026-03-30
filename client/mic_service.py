@@ -21,7 +21,7 @@ class SileroVAD:
         # Clears the RNN memory so old noise doesn't affect new detection
         self._state = np.zeros((2, 1, 128)).astype('float32')
 
-    def is_speech(self, audio_data, threshold=0.5):
+    def is_speech(self, audio_data, threshold=0.7):
         # Input: 512 samples of float32 normalized audio
         inputs = {
             "input": audio_data.reshape(1, -1),
