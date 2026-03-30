@@ -53,16 +53,16 @@ def screen_loop(brain):
         current_state = brain.state
         if current_state == JarvisState.IDLE:
             display_clock(display, image, draw)
-            time.sleep(1) 
+            time.sleep(0.05) 
         elif current_state == JarvisState.LISTENING:
             display_listening(display, image, draw)
-            time.sleep(0.1)
+            time.sleep(0.05)
         elif current_state == JarvisState.THINKING:
             display_thinking(display, image, draw)
-            time.sleep(0.1) 
+            time.sleep(0.05) 
         elif current_state == JarvisState.SPEAKING:
             display_speaking(display, image, draw)
-            time.sleep(0.1)
+            time.sleep(0.05)
         else:
             display_error(display, image, draw)
             time.sleep(1)

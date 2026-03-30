@@ -22,6 +22,7 @@ def mic_loop(brain, audio_queue):
         data = stream.read(2000, exception_on_overflow=False)
         # IDLE or SPEAKING State
         if brain.state == JarvisState.IDLE or brain.state==JarvisState.SPEAKING:
+            # It could be redundant to wait for the end of the speech if we detect jarvis in partial result
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
                 if "jarvis" in result.get("text", ""):
@@ -34,6 +35,7 @@ def mic_loop(brain, audio_queue):
         # LISTENING State
         elif brain.state == JarvisState.LISTENING:
             audio_queue.put(data)
+            # This silence detection could be why it rushes to send silence/jarvis speech to the server
             if recognizer.AcceptWaveform(data):
                 brain.set_state(JarvisState.THINKING)
                 audio_queue.put(b'EOF')
