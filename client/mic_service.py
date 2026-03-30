@@ -21,7 +21,7 @@ def mic_loop(brain, audio_queue):
     while True:
         data = stream.read(2000, exception_on_overflow=False)
         # IDLE or SPEAKING State
-        if brain.state == JarvisState.IDLE or brain.state==JarvisState.SPEAKING:
+        if brain.state == JarvisState.IDLE:
             # It could be redundant to wait for the end of the speech if we detect jarvis in partial result
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
@@ -40,9 +40,10 @@ def mic_loop(brain, audio_queue):
                 brain.set_state(JarvisState.THINKING)
                 audio_queue.put(b'EOF')
                 recognizer.Reset()
-        # THINKING - Do nothing.
-        else:
-            pass
+        # SPEAKING - Flush the input buffer to prevent Jarvis from hearing himself.
+        elif brain.state == JarvisState.SPEAKING:
+            _ = stream.read(2000, exception_on_overflow=False)
+            continue
 
 """
 import sys, types
