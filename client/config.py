@@ -28,5 +28,5 @@ MOUTH_BEAT_SEC = 0.02
 W, H = 128, 64
 
 # File Paths
-WAKEWORD = "hey_jarvis"
+WAKEWORD = "hey_jarvis_v0.1"
 WAKEWORD_MODEL_PATH = "models/hey_jarvis_v0.1.onnx"
