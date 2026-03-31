@@ -17,7 +17,7 @@ def _amplify(data: bytes, gain: float) -> bytes:
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
     audio_array = np.frombuffer(data, dtype=np.int16)
-    prediction = model.predict(audio_array, debounce_time=1.0)
+    prediction = model.predict(audio_array)
     print(prediction)
     return prediction[WAKEWORD] > WAKEWORD_THRESHOLD
 
@@ -62,6 +62,7 @@ def mic_loop(brain, audio_queue, playback_queue):
     user_voice_detected = False
     listening_entered_at = 0.0
     last_speech_at = 0.0
+    last_wakeword_time = 0.0
 
     print("[Mic Thread]: Ready!")
 
@@ -80,7 +81,9 @@ def mic_loop(brain, audio_queue, playback_queue):
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
             data = _amplify(data, GAIN)
-            if detect_wakeword(oww_model, data):
+            now = time.time()
+            if detect_wakeword(oww_model, data) and now - last_wakeword_time > 2.0:
+                last_wakeword_time = now
                 play_wakeword_feedback(playback_queue, beep_bytes)
 
         # LISTENING: record speech until silence
