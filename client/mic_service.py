@@ -18,7 +18,6 @@ def _amplify(data: bytes, gain: float) -> bytes:
 def detect_wakeword(model: Model, data: bytes) -> bool:
     audio_array = np.frombuffer(data, dtype=np.int16)
     prediction = model.predict(audio_array)
-    print(prediction)
     return prediction[WAKEWORD] > WAKEWORD_THRESHOLD
 
 def detect_speech(vad: webrtcvad.Vad, data: bytes) -> bool:
@@ -35,7 +34,7 @@ def load_feedback_sound_bytes() -> bytes:
 
 def play_wakeword_feedback(playback_queue, sound_bytes: bytes):
     playback_queue.put(sound_bytes)
-    playback_queue.put(b"EOF_WAKE")
+    playback_queue.put(b"EOF")
 
 def post_speech_timeout_passed(now, last_speech_at, post_speech_silence):
     return now - last_speech_at > post_speech_silence
@@ -105,7 +104,7 @@ def mic_loop(brain, audio_queue, playback_queue):
             now = time.time()
             # End of speech, silence after talking
             if user_voice_detected and post_speech_timeout_passed(now, last_speech_at, POST_SPEECH_SILENCE):
-                audio_queue.put(b"EOF_SPEECH")
+                audio_queue.put(b"EOF")
                 brain.set_state(JarvisState.THINKING)
 
             # No speech at all within timeout — give up
