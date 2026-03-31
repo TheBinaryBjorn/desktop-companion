@@ -38,7 +38,12 @@ def post_speech_timeout_passed(now, last_speech_at, post_speech_silence):
 def listening_state_timeout_passed(now, listening_entered_at, no_speech_timeout):
     return now - listening_entered_at > no_speech_timeout
 
-def mic_loop(brain, audio_queue, playback_queue):
+def thread_shutdown(stream, audio):
+    stream.stop_stream()
+    stream.close()
+    audio.terminate()
+
+def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
     oww_model = Model([WAKEWORD_MODEL_PATH])
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     audio = pyaudio.PyAudio()
@@ -62,7 +67,7 @@ def mic_loop(brain, audio_queue, playback_queue):
 
     print("[Mic Thread]: Ready!")
 
-    while True:
+    while not shutdown_event.is_set():
         current_state = brain.state
 
         # State entry setup
@@ -119,4 +124,5 @@ def mic_loop(brain, audio_queue, playback_queue):
         # SPEAKING: flush mic so Jarvis doesn't hear himself
         elif current_state == JarvisState.SPEAKING:
             stream.read(OWW_CHUNK, exception_on_overflow=False)
+    thread_shutdown(stream, audio)
 

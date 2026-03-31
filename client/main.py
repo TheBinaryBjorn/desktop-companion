@@ -14,23 +14,29 @@ def main():
     audio_queue = queue.Queue()
     playback_queue = queue.Queue()
 
-    # Define the threads
-    t_screen = threading.Thread(target=screen_loop, args=(brain,), daemon=True)
-    t_mic = threading.Thread(target=mic_loop, args=(brain, audio_queue, playback_queue), daemon=True)
-    t_net = threading.Thread(target=network_loop, args=(brain, audio_queue, playback_queue), daemon=True)
-    t_speaker = threading.Thread(target=speaker_loop, args=(brain, playback_queue), daemon=True)
+    # Define event
+    shutdown_event = threading.Event()
 
+    # Define the threads
+    t_screen = threading.Thread(target=screen_loop, args=(brain, shutdown_event), daemon=True)
+    t_mic = threading.Thread(target=mic_loop, args=(brain, shutdown_event, audio_queue, playback_queue), daemon=True)
+    t_net = threading.Thread(target=network_loop, args=(brain, shutdown_event, audio_queue, playback_queue), daemon=True)
+    t_speaker = threading.Thread(target=speaker_loop, args=(brain, shutdown_event, playback_queue), daemon=True)
+    
+    threads = [t_screen, t_mic, t_net, t_speaker]
+    
     # Start the threads
-    t_screen.start()
-    t_mic.start()
-    t_net.start()
-    t_speaker.start()
+    for thread in threads:
+        thread.start()
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         print("\nShutting down Jarvis...")
+        shutdown_event.set()
+        for thread in reversed(threads):
+            thread.join(timeout=2.0)
 
 if __name__ == "__main__":
     main()
