@@ -45,12 +45,20 @@ def display_speaking(display, image, draw):
 
 def display_error(display, image, draw):
     display_text(display, image, draw, "[Error]")
-    
-def screen_loop(brain):
+
+def clear_screen(display, image, draw):
+    clear_buffer(draw)
+    push_frame(display, image)
+
+def thread_shutdown(display, image, draw):
+    clear_screen(display, image, draw)
+    display.poweroff()
+
+def screen_loop(brain, shutdown_event):
     display = create_display()
     image, draw = create_canvas()
     print("[Screen Thread]: Ready!")
-    while True:
+    while not shutdown_event.is_set():
         current_state = brain.state
         if current_state == JarvisState.IDLE:
             display_clock(display, image, draw)
@@ -67,3 +75,4 @@ def screen_loop(brain):
         else:
             display_error(display, image, draw)
             time.sleep(1)
+    thread_shutdown(display, image, draw)
