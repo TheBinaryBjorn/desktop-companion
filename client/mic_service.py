@@ -8,7 +8,7 @@ VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.5 # openWakeWord detection threshold
-GAIN = 20.0
+GAIN = 10.0
 
 def _amplify(data: bytes, gain: float) -> bytes:
     samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
