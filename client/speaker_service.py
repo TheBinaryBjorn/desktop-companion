@@ -6,7 +6,7 @@ def thread_shutdown(audio, stream):
     stream.close()
     audio.terminate()
 
-def speaker_loop(brain, shutdown_event, playback_queue):
+def speaker_loop(brain, shutdown_event, startup_barrier, playback_queue):
     audio = pyaudio.PyAudio()
 
     stream = audio.open(format=pyaudio.paInt16,
@@ -14,6 +14,8 @@ def speaker_loop(brain, shutdown_event, playback_queue):
                         rate=22050,
                         output=True)
     print("[Speaker Thread]: Ready!")
+    startup_barrier.wait()
+    print("[Speaker Thread]: Running!")
     while not shutdown_event.is_set():
         try:
             audio_data = playback_queue.get(timeout=1.0)

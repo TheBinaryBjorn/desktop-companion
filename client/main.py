@@ -5,6 +5,7 @@ from screen_service import screen_loop
 from network_service import network_loop
 from speaker_service import speaker_loop
 
+THREAD_COUNT = 4
 
 def main():
     # Start in IDLE
@@ -16,14 +17,25 @@ def main():
 
     # Define event
     shutdown_event = threading.Event()
+    startup_barrier = threading.Barrier(THREAD_COUNT)
 
     # Define the threads
-    t_screen = threading.Thread(target=screen_loop, args=(brain, shutdown_event), daemon=True)
-    t_mic = threading.Thread(target=mic_loop, args=(brain, shutdown_event, audio_queue, playback_queue), daemon=True)
-    t_net = threading.Thread(target=network_loop, args=(brain, shutdown_event, audio_queue, playback_queue), daemon=True)
-    t_speaker = threading.Thread(target=speaker_loop, args=(brain, shutdown_event, playback_queue), daemon=True)
+    t_screen = threading.Thread(target=screen_loop,
+                                args=(brain,
+                                      shutdown_event,
+                                      startup_barrier),
+                                daemon=True)
+    t_mic = threading.Thread(target=mic_loop,
+                             args=(brain, shutdown_event, startup_barrier, audio_queue, playback_queue),
+                             daemon=True)
+    t_net = threading.Thread(target=network_loop,
+                             args=(brain, shutdown_event, startup_barrier, audio_queue, playback_queue),
+                             daemon=True)
+    t_speaker = threading.Thread(target=speaker_loop,
+                                 args=(brain, shutdown_event, startup_barrier, playback_queue),
+                                 daemon=True)
     
-    threads = [t_screen, t_mic, t_net, t_speaker]
+    threads = [t_net, t_mic, t_speaker, t_screen]
     
     # Start the threads
     for thread in threads:

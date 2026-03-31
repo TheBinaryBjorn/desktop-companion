@@ -54,10 +54,12 @@ def thread_shutdown(display, image, draw):
     clear_screen(display, image, draw)
     display.poweroff()
 
-def screen_loop(brain, shutdown_event):
+def screen_loop(brain, shutdown_event, startup_barrier):
     display = create_display()
     image, draw = create_canvas()
     print("[Screen Thread]: Ready!")
+    startup_barrier.wait()
+    print("[Screen Thread]: Running!")
     while not shutdown_event.is_set():
         current_state = brain.state
         if current_state == JarvisState.IDLE:
