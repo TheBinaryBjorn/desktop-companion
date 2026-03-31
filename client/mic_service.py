@@ -71,6 +71,8 @@ def mic_loop(brain, audio_queue, playback_queue):
                 listening_entered_at = time.time()
                 last_speech_at = time.time()
                 speech_frame_count = 0
+                stream.stop_stream()
+                stream.start_stream()
             prev_state = current_state
 
         # IDLE: listen for wakeword
