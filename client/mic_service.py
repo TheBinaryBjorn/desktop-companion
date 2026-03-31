@@ -8,6 +8,7 @@ VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.5 # openWakeWord detection threshold
+VAD_AGGRESSIVENESS = 3
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
     audio_array = np.frombuffer(data, dtype=np.int16)
@@ -38,7 +39,7 @@ def listening_state_timeout_passed(now, listening_entered_at, no_speech_timeout)
 
 def mic_loop(brain, audio_queue, playback_queue):
     oww_model = Model([WAKEWORD_MODEL_PATH])
-    vad = webrtcvad.Vad(2)
+    vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     audio = pyaudio.PyAudio()
     stream = audio.open(
         format=pyaudio.paInt16,
@@ -56,6 +57,7 @@ def mic_loop(brain, audio_queue, playback_queue):
     listening_entered_at = 0.0
     last_speech_at = 0.0
     last_wakeword_time = 0.0
+    speech_frame_count = 0
 
     print("[Mic Thread]: Ready!")
 
@@ -68,6 +70,7 @@ def mic_loop(brain, audio_queue, playback_queue):
                 user_voice_detected = False
                 listening_entered_at = time.time()
                 last_speech_at = time.time()
+                speech_frame_count = 0
             prev_state = current_state
 
         # IDLE: listen for wakeword
@@ -86,8 +89,13 @@ def mic_loop(brain, audio_queue, playback_queue):
 
             # Detect speech in voice chunk
             if detect_speech(vad, data):
-                user_voice_detected = True
+                speech_frame_count += 1
                 last_speech_at = time.time()
+                if speech_frame_count >= 3:
+                    user_voice_detected = True
+            else:
+                speech_frame_count = 0
+                
 
             # Only queue audio once speech has started
             if user_voice_detected:
