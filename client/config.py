@@ -28,4 +28,5 @@ MOUTH_BEAT_SEC = 0.02
 W, H = 128, 64
 
 # File Paths
-VOSK_MODEL_PATH = "/home/daniel/deskpet/client/models/vosk-model-small-en-us-0.15"
+WAKEWORD = "hey_jarvis_v0.1"
+WAKEWORD_MODEL_PATH = "models/hey_jarvis_v0.1.onnx"
