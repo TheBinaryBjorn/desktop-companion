@@ -29,4 +29,4 @@ W, H = 128, 64
 
 # File Paths
 WAKEWORD = "hey_jarvis"
-WAKEWORD_MODEL_PATH = ["hey_jarvis"]
+WAKEWORD_MODEL_PATH = "models/hey_jarvis_v0.1.onnx"
