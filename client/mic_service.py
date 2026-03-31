@@ -79,7 +79,7 @@ def mic_loop(brain, audio_queue, playback_queue):
         # IDLE: listen for wakeword
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
-            data = _amplify(data, GAIN)
+            #data = _amplify(data, GAIN)
             now = time.time()
             if detect_wakeword(oww_model, data) and now - last_wakeword_time > 2.0:
                 last_wakeword_time = now
@@ -90,7 +90,7 @@ def mic_loop(brain, audio_queue, playback_queue):
 
             # Read one OWW_CHUNK
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
-            data = _amplify(data, GAIN)
+            #data = _amplify(data, GAIN)
 
             # Detect speech in voice chunk
             if detect_speech(vad, data):
