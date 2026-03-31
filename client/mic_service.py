@@ -20,6 +20,7 @@ def _int16_to_float32(data: bytes) -> np.ndarray:
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
     prediction = model.predict(_int16_to_float32(data))
+    print(prediction)
     return prediction[WAKEWORD] > WAKEWORD_THRESHOLD
 
 def detect_speech(vad: webrtcvad.Vad, data: bytes) -> bool:
