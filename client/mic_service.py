@@ -8,6 +8,12 @@ VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.5 # openWakeWord detection threshold
+GAIN = 20.0
+
+def _amplify(data: bytes, gain: float) -> bytes:
+    samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+    amplified = np.clip(samples * gain, -32768, 32767)
+    return amplified.astype(np.int16).tobytes()
 
 def _int16_to_float32(data: bytes) -> np.ndarray:
     return np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
@@ -74,6 +80,7 @@ def mic_loop(brain, audio_queue, playback_queue):
         # IDLE: listen for wakeword
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
+            data = _amplify(data, GAIN)
             if detect_wakeword(oww_model, data):
                 play_wakeword_feedback(playback_queue, beep_bytes)
 
@@ -82,6 +89,7 @@ def mic_loop(brain, audio_queue, playback_queue):
 
             # Read one OWW_CHUNK
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
+            data = _amplify(data, GAIN)
 
             # Detect speech in voice chunk
             if detect_speech(vad, data):
