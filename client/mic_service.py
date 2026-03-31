@@ -17,7 +17,7 @@ def _amplify(data: bytes, gain: float) -> bytes:
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
     audio_array = np.frombuffer(data, dtype=np.int16)
-    prediction = model.predict(audio_array)
+    prediction = model.predict(audio_array, debounce_time=1.0)
     print(prediction)
     return prediction[WAKEWORD] > WAKEWORD_THRESHOLD
 
