@@ -23,21 +23,80 @@ STT_DEVICE="cpu" <- set to "cuda"
 STT_COMPUTE_TYPE="int8"
 ```
 
-### Client
-1. install Raspberry Pi OS Lite
-2. `sudo apt update && sudo apt install git -y`
-3. `sudo apt install python3-dev -y`
-4. pyaudio dependency: `sudo apt install portaudio19-dev -y`
-5. enable i2c: `sudo raspi-config` Interface Options->I2C->Yes->Ok->Finish
-6. `git clone https://github.com/TheBinaryBjorn/desktop-companion.git`
-7. `cd desktop-companion/client`
-8. install venv: `python -m venv .venv`
-9. activate virtual environment: `source .venv/bin/activate`
-10. install dependencies: `pip install pyaudio webrtcvad-wheels numpy dotenv adafruit-circuitpython-ssd1306 Pillow RPi.GPIO websockets`
-11. install openwakeword: `pip install openwakeword` in case this causes a no disk space error, use:
-    ```
-    export TMPDIR=/home/[your_pi_username]/tmp
-    mkdir -p $TMPDIR
-    pip install openwakeword --cache-dir /home/[your_pi_username]/pip-cache
-    ```
-12. start the program: `python main.py`
+### Client Setup Guide
+
+#### Prerequisites
+- Raspberry Pi Zero 2 W
+- MicroSD card (16GB+, Samsung Endurance or SanDisk Max Endurance recommended)
+- INMP441 I2S microphone
+- Fresh install of Raspberry Pi OS Lite (64-bit)
+
+#### Installation Steps
+
+#### 1. System Dependencies
+```bash
+sudo apt update && sudo apt install git python3-dev portaudio19-dev -y
+```
+
+#### 2. I2S Microphone Overlay
+```bash
+echo 'dtoverlay=googlevoicehat-soundcard' | sudo tee -a /boot/firmware/config.txt
+sudo reboot
+```
+
+#### 3. Enable I2C (for OLED display)
+```bash
+sudo raspi-config
+```
+Navigate to: **Interface Options → I2C → Yes → OK → Finish**
+
+#### 4. Clone the Repository
+```bash
+git clone https://github.com/TheBinaryBjorn/desktop-companion.git
+cd desktop-companion/client
+```
+
+#### 5. Create Virtual Environment
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+#### 6. Install Dependencies
+```bash
+pip install pyaudio webrtcvad-wheels numpy python-dotenv adafruit-circuitpython-ssd1306 Pillow RPi.GPIO websockets
+```
+
+#### 7. Install openWakeWord
+```bash
+pip install openwakeword
+```
+
+> **If you get a "No space left on device" error**, run this instead:
+> ```bash
+> export TMPDIR=/home/[your_pi_username]/tmp
+> mkdir -p $TMPDIR
+> pip install openwakeword --cache-dir /home/[your_pi_username]/pip-cache
+> ```
+
+#### 8. Create Environment File
+```bash
+nano .env
+```
+Add the following:
+```
+SERVER_IP=[Your Server IP]
+```
+You can find your server ip by running `ipconfig` on you server pc.
+
+#### 9. Run
+```bash
+python main.py
+```
+
+### Optional: Extend SD Card Lifespan
+```bash
+sudo systemctl disable dphys-swapfile
+echo 'gpu_mem=16' | sudo tee -a /boot/firmware/config.txt
+sudo reboot
+```
