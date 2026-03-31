@@ -1,4 +1,5 @@
 import wave, time, pyaudio, webrtcvad, numpy as np
+from collections import deque
 from openwakeword.model import Model
 from config import RATE, WAKEWORD, WAKEWORD_MODEL_PATH
 from state_manager import JarvisState
@@ -64,6 +65,7 @@ def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
     last_speech_at = 0.0
     last_wakeword_time = 0.0
     speech_frame_count = 0
+    preroll_buffer = deque(maxlen=5)
 
     print("[Mic Thread]: Ready!")
 
@@ -77,6 +79,7 @@ def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
                 listening_entered_at = time.time()
                 last_speech_at = time.time()
                 speech_frame_count = 0
+                preroll_buffer.clear()
                 stream.stop_stream()
                 stream.start_stream()
                 time.sleep(0.5)
@@ -96,20 +99,24 @@ def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
 
             # Read one OWW_CHUNK
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
-
+            data_contains_speech = detect_speech(vad, data)
             # Detect speech in voice chunk
-            if detect_speech(vad, data):
-                speech_frame_count += 1
-                last_speech_at = time.time()
-                if speech_frame_count >= 3:
-                    user_voice_detected = True
+            if not user_voice_detected:
+                preroll_buffer.append(data)
+                if data_contains_speech:
+                    speech_frame_count += 1
+                    last_speech_at = time.time()
+                    if speech_frame_count >= 3:
+                        user_voice_detected = True
+                        while len(preroll_buffer) > 0:
+                            audio_queue.put(preroll_buffer.popleft())
+                else:
+                    speech_frame_count = 0
+            # Only queue audio once speech has started 
             else:
-                speech_frame_count = 0
-                
-
-            # Only queue audio once speech has started
-            if user_voice_detected:
                 audio_queue.put(data)
+                if data_contains_speech:
+                    last_speech_at = time.time()
 
             now = time.time()
             # End of speech, silence after talking
