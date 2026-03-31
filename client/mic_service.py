@@ -39,7 +39,7 @@ def listening_state_timeout_passed(now, listening_entered_at, no_speech_timeout)
     return now - listening_entered_at > no_speech_timeout
 
 def mic_loop(brain, audio_queue, playback_queue):
-    oww_model = Model(wakeword_models=WAKEWORD_MODEL_PATH)
+    oww_model = Model(wakeword_models=WAKEWORD_MODEL_PATH, inference_framework="onnx")
     vad = webrtcvad.Vad(2)
     audio = pyaudio.PyAudio()
     stream = audio.open(
