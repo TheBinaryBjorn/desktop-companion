@@ -2,16 +2,22 @@ import json, websockets, asyncio, queue
 from state_manager import JarvisState
 from config import SERVER_IP
 
-async def network_task(brain, shutdown_event, audio_queue, playback_queue):
+async def network_task(brain, shutdown_event, startup_barrier, audio_queue, playback_queue):
     uri = f"ws://{SERVER_IP}:8000/stream"
-    print("[Network Thread]: Ready!")
+    is_first_connection = True
+    print("[Network Thread]: Connecting to the server...")
     while not shutdown_event.is_set():
         try:
             async with websockets.connect(uri) as ws:
                 print("Connected to server.")
                 if brain.state == JarvisState.ERROR:
                     brain.set_state(JarvisState.IDLE)
-
+                if is_first_connection:
+                    print("[Network Thread]: Waiting for hardware...")
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, startup_barrier.wait)
+                    is_first_connection = False
+                    print("[Network Thread]: All systems go! Ready to stream.")
                 async def receive_handler():
                     first_chunk_received = False
                     while not shutdown_event.is_set():
@@ -56,5 +62,5 @@ async def network_task(brain, shutdown_event, audio_queue, playback_queue):
             brain.set_state(JarvisState.ERROR)
             await asyncio.sleep(5)
 
-def network_loop(brain, shutdown_event, audio_queue, playback_queue):
-    asyncio.run(network_task(brain, shutdown_event, audio_queue, playback_queue))
+def network_loop(brain, shutdown_event, startup_barrier, audio_queue, playback_queue):
+    asyncio.run(network_task(brain, shutdown_event, startup_barrier, audio_queue, playback_queue))

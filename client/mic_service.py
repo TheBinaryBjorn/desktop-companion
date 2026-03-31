@@ -44,7 +44,7 @@ def thread_shutdown(stream, audio):
     stream.close()
     audio.terminate()
 
-def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
+def mic_loop(brain, shutdown_event, startup_barrier, audio_queue, playback_queue):
     oww_model = Model([WAKEWORD_MODEL_PATH])
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     audio = pyaudio.PyAudio()
@@ -68,7 +68,8 @@ def mic_loop(brain, shutdown_event, audio_queue, playback_queue):
     preroll_buffer = deque(maxlen=5)
 
     print("[Mic Thread]: Ready!")
-
+    startup_barrier.wait()
+    print("[Mic Thread]: Running!")
     while not shutdown_event.is_set():
         current_state = brain.state
 
