@@ -30,6 +30,7 @@ def load_feedback_sound_bytes() -> bytes:
 def play_wakeword_feedback(playback_queue, sound_bytes: bytes):
     playback_queue.put(sound_bytes)
     playback_queue.put(b"EOF")
+    time.sleep(1.0) # wait for the sound to die down
 
 def post_speech_timeout_passed(now, last_speech_at, post_speech_silence):
     return now - last_speech_at > post_speech_silence
