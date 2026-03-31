@@ -3,12 +3,17 @@ from openwakeword.model import Model
 from config import RATE, WAKEWORD, WAKEWORD_MODEL_PATH
 from state_manager import JarvisState
 
-OWW_CHUNK = 1280 # 1280 samples (80ms at 16kHz)
+OWW_CHUNK = 1280*2 # 1280 samples (80ms at 16kHz)
 VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.5 # openWakeWord detection threshold
 GAIN = 20.0
+
+def _stereo_to_mono(data: bytes) -> bytes:
+    samples = np.frombuffer(data, dtype=np.int16)
+    left_channel = samples[::2]  # take every other sample
+    return left_channel.tobytes()
 
 def _amplify(data: bytes, gain: float) -> bytes:
     samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
@@ -51,7 +56,7 @@ def mic_loop(brain, audio_queue, playback_queue):
     audio = pyaudio.PyAudio()
     stream = audio.open(
         format=pyaudio.paInt16,
-        channels=1,
+        channels=2,
         rate=RATE,
         input=True,
         frames_per_buffer=OWW_CHUNK,
@@ -81,6 +86,7 @@ def mic_loop(brain, audio_queue, playback_queue):
         # IDLE: listen for wakeword
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
+            data = _stereo_to_mono(data)
             data = _amplify(data, GAIN)
             if detect_wakeword(oww_model, data):
                 play_wakeword_feedback(playback_queue, beep_bytes)
@@ -90,6 +96,7 @@ def mic_loop(brain, audio_queue, playback_queue):
 
             # Read one OWW_CHUNK
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
+            data = _stereo_to_mono(data)
             data = _amplify(data, GAIN)
 
             # Detect speech in voice chunk
