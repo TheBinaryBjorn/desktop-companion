@@ -83,7 +83,6 @@ def mic_loop(brain, audio_queue, playback_queue):
             now = time.time()
             if detect_wakeword(oww_model, data) and now + 1.0 - last_wakeword_time > 2.0:
                 last_wakeword_time = now
-                oww_model.rest()
                 play_wakeword_feedback(playback_queue, beep_bytes)
 
         # LISTENING: record speech until silence
