@@ -9,7 +9,7 @@ VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.7 # openWakeWord detection threshold
-WAKEWORD_COOLDOWN = 6.0
+WAKEWORD_COOLDOWN = 7.0
 VAD_AGGRESSIVENESS = 2
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
