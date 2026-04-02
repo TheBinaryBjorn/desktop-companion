@@ -90,7 +90,7 @@ def mic_loop(brain, shutdown_event, startup_barrier, audio_queue, playback_queue
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
             now = time.time()
-            if detect_wakeword(oww_model, data) and now - last_wakeword_time > 2.0:
+            if detect_wakeword(oww_model, data) and now - last_wakeword_time > NO_SPEECH_TIMEOUT:
                 last_wakeword_time = now
                 oww_model.reset()
                 play_wakeword_feedback(playback_queue, beep_bytes)
