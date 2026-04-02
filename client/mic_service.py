@@ -9,6 +9,7 @@ VAD_CHUNK = 320 # 320 samples (20ms at 16kHz)
 NO_SPEECH_TIMEOUT = 5.0 # Seconds with no speech detected before returning to IDLE
 POST_SPEECH_SILENCE = 1.0 # Seconds of silence after speech before treating utterance as complete
 WAKEWORD_THRESHOLD = 0.7 # openWakeWord detection threshold
+WAKEWORD_COOLDOWN = 6.0
 VAD_AGGRESSIVENESS = 2
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
@@ -38,6 +39,9 @@ def post_speech_timeout_passed(now, last_speech_at, post_speech_silence):
 
 def listening_state_timeout_passed(now, listening_entered_at, no_speech_timeout):
     return now - listening_entered_at > no_speech_timeout
+
+def wakeword_cooldown_passed(now, last_wakeword_time, wakeword_cooldown):
+    return now - last_wakeword_time > wakeword_cooldown
 
 def thread_shutdown(stream, audio):
     stream.stop_stream()
@@ -90,7 +94,7 @@ def mic_loop(brain, shutdown_event, startup_barrier, audio_queue, playback_queue
         if current_state == JarvisState.IDLE:
             data = stream.read(OWW_CHUNK, exception_on_overflow=False)
             now = time.time()
-            if detect_wakeword(oww_model, data) and now - last_wakeword_time > NO_SPEECH_TIMEOUT:
+            if detect_wakeword(oww_model, data) and wakeword_cooldown_passed(now, last_wakeword_time, WAKEWORD_COOLDOWN):
                 last_wakeword_time = now
                 oww_model.reset()
                 play_wakeword_feedback(playback_queue, beep_bytes)
