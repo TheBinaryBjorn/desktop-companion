@@ -15,4 +15,4 @@ jobs:
         run: docker run --rm server pytest server/ --cov=server/
 
       - name: Run Linter in Docker
-        run: docker run --rm server pylint server/
+        run: docker run --rm server pylint server/src
