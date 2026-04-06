@@ -1,0 +1,18 @@
+name: CI Workflow
+on: [push, pull_request]
+
+jobs:
+  server-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t server .
+
+      - name: Run Tests and Coverage in Docker
+        run: docker run --rm server pytest server/ --cov=server/
+
+      - name: Run Linter in Docker
+        run: docker run --rm server pylint server/
