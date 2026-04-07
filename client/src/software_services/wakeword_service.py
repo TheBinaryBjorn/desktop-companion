@@ -6,7 +6,7 @@ in audio (PCM Bytes).
 from abc import ABC, abstractmethod
 import numpy as np
 from openwakeword.model import Model
-from client.src.config import (
+from src.config import (
     WAKEWORD,
     WAKEWORD_THRESHOLD,
     PCM_BYTE_CHUNK_SIZE
