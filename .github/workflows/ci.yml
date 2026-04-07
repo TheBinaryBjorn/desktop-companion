@@ -15,7 +15,7 @@ jobs:
         run: pip install -r client/src/requirements.txt
 
       - name: Run Tests
-        run: pytest client/ --cov=client/
+        run: pytest client/tests/ --cov=client/
 
       - name: Run Linter
         run: pylint client/src
