@@ -12,7 +12,7 @@ jobs:
         run: sudo apt install -y portaudio19-dev
 
       - name: Install Python Dependencies
-        run: pip install -r client/requirements.txt
+        run: pip install -r client/src/requirements.txt
 
       - name: Run Tests
         run: pytest client/ --cov=client/
