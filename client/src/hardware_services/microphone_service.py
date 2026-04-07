@@ -5,6 +5,12 @@ INMP microphone.
 
 from abc import ABC, abstractmethod
 import pyaudio
+from config import (
+    MICROPHONE_SERVICE_FORMAT,
+    MICROPHONE_SERVICE_CHANNELS,
+    MICROPHONE_SERVICE_RATE,
+    MICROPHONE_SERVICE_CHUNK_SIZE,
+)
 
 
 class MicrophoneService(ABC):
@@ -19,10 +25,16 @@ class MicrophoneService(ABC):
         pass
 
 
-class PyAudioService(MicrophoneService):
+class PyAudioMicrophoneService(MicrophoneService):
     """This class is a pyaudio wrapper to implement the microphone service."""
 
-    def __init__(self, chunk_size, stream_format, channels, rate):
+    def __init__(
+        self,
+        stream_format=MICROPHONE_SERVICE_FORMAT,
+        channels=MICROPHONE_SERVICE_CHANNELS,
+        rate=MICROPHONE_SERVICE_RATE,
+        chunk_size=MICROPHONE_SERVICE_CHUNK_SIZE,
+    ):
         self.chunk_size = chunk_size
         self.stream_format = stream_format
         self.channels = channels
