@@ -8,7 +8,7 @@ def test_detect_wakeword_above_threshold():
     mock_model.predict.return_value = {WAKEWORD: WAKEWORD_THRESHOLD + 0.1}
 
     service = OpenWakeWordService(model=mock_model)
-    result = service.detect_wakeword(b"\x00\x01" * 512)
+    result = service.detect_wakeword(b"\x00\x01" * PCM_BYTE_CHUNK_SIZE)
 
     assert result is True
 
