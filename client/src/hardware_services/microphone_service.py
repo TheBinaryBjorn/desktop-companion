@@ -5,7 +5,7 @@ INMP microphone.
 
 from abc import ABC, abstractmethod
 import pyaudio
-from src.hardware_services.config import (
+from src.config import (
     MICROPHONE_SERVICE_FORMAT,
     MICROPHONE_SERVICE_CHANNELS,
     MICROPHONE_SERVICE_RATE,
