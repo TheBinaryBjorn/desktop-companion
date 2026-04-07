@@ -43,3 +43,11 @@ def test_detect_wakeword_with_wrong_chunk_size():
 
     with pytest.raises((ValueError, TypeError)):
         service.detect_wakeword(b"\x00\x01")
+
+def test_reset_model_calls_internal_model_reset():
+    mock_model = MagicMock()
+    service = OpenWakeWordService(model=mock_model)
+
+    service.reset_model()
+
+    mock_model.reset.assert_called_once()
