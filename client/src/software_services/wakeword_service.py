@@ -6,11 +6,7 @@ in audio (PCM Bytes).
 from abc import ABC, abstractmethod
 import numpy as np
 from openwakeword.model import Model
-from src.config import (
-    WAKEWORD,
-    WAKEWORD_THRESHOLD,
-    PCM_BYTE_CHUNK_SIZE
-)
+from src.config import WAKEWORD, WAKEWORD_THRESHOLD, PCM_BYTE_CHUNK_SIZE
 
 
 class WakeWordDetectionService(ABC):
@@ -21,7 +17,6 @@ class WakeWordDetectionService(ABC):
     @abstractmethod
     def detect_wakeword(self, pcm_bytes):
         """This method detects a wake word in raw pcm bytes"""
-        pass
 
 
 class OpenWakeWordService(WakeWordDetectionService):
@@ -38,7 +33,9 @@ class OpenWakeWordService(WakeWordDetectionService):
         if not isinstance(pcm_bytes, bytes):
             raise ValueError(f"Expected bytes, got {type(pcm_bytes).__name__}")
         if len(pcm_bytes) != PCM_BYTE_CHUNK_SIZE * 2:
-            raise ValueError(f"Expected {PCM_BYTE_CHUNK_SIZE * 2} bytes, got {len(pcm_bytes)}")
+            raise ValueError(
+                f"Expected {PCM_BYTE_CHUNK_SIZE * 2} bytes, got {len(pcm_bytes)}"
+            )
         audio_array = np.frombuffer(pcm_bytes, dtype=np.int16)
         prediction = self.model.predict(audio_array)
         return prediction[WAKEWORD] >= WAKEWORD_THRESHOLD

@@ -22,7 +22,6 @@ class MicrophoneService(ABC):
     @abstractmethod
     def read_pcm_bytes(self):
         """This function reads raw pcm bytes from an audio stream"""
-        pass
 
 
 class PyAudioMicrophoneService(MicrophoneService):

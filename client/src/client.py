@@ -3,18 +3,10 @@ This module contains the main client loop
 that runs on the Raspberry Pi Zero 2W
 """
 
-"""
-
-from src.hardware_services.speaker_service import PyAudioSpeakerService
-from src.hardware_services.network_service import WebSocketService
-from src.hardware_services.screen_service import ScreenService
-
-from src.software_services.speech_detection_service import WebRtcService
-"""
+from openwakeword.model import Model
 from src.hardware_services.microphone_service import PyAudioMicrophoneService
 from src.software_services.wakeword_service import OpenWakeWordService
-from config import WAKEWORD_MODEL_PATH
-from openwakeword.model import Model
+from src.config import WAKEWORD_MODEL_PATH
 
 
 def main():
@@ -22,22 +14,18 @@ def main():
     microphone = PyAudioMicrophoneService()
     wakeword_model = Model(WAKEWORD_MODEL_PATH)
     wakeword = OpenWakeWordService(model=wakeword_model)
-    """
-    vad = WebRtcService()
-    server = WebSocketService()
-    speaker = PyAudioSpeakerService()
-    """
     while True:
         # listen for input
-
+        pcm_bytes = microphone.read_pcm_bytes()
         # if wakeword detected - openwakeword
+        if wakeword.detect_wakeword(pcm_bytes):
+            print("Wakeword Detected.")
         # listen for user input
         # if user spoke - webrtc vad
         # listen for full query
         # stream query to server
         # wait for response
         # play server response
-        pass
 
 
 main()
