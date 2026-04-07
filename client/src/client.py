@@ -8,11 +8,13 @@ def main():
     """This is the main pi loop"""
     while True:
         # listen for input
-        # if wakeword detected
-        # listen for user input
-        # if user spoke
-        # send query to server
-        # wait for response
+        # if wakeword detected - openwakeword
+            # listen for user input
+            # if user spoke - webrtc vad
+                # listen for full query
+                # stream query to server
+            # wait for response
+            # play server response
         pass
 
 
