@@ -9,7 +9,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install PortAudio
-        run: sudo apt install -y portaduio19-dev
+        run: sudo apt install -y portaudio19-dev
 
       - name: Install Python Dependencies
         run: pip install -r client/requirements.txt
