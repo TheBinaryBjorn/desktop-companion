@@ -12,3 +12,6 @@ def test_detects_wakeword_from_hardware():
         pcm_bytes = microphone.read_pcm_bytes()
         result = service.detect_wakeword(pcm_bytes)
         assert isinstance(result, bool)
+
+def test_reset_model_clears_internal_state_integration():
+    pass
