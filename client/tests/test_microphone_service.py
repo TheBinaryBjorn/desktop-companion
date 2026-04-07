@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from src.hardware_services.microphone_service import PyAudioMicrophoneService
 from src.hardware_services.config import MICROPHONE_SERVICE_FORMAT, MICROPHONE_SERVICE_CHANNELS, MICROPHONE_SERVICE_RATE, MICROPHONE_SERVICE_CHUNK_SIZE
 
-@patch("microphone_service.pyaudio.PyAudio")
+@patch("src.hardware_services.microphone_service.pyaudio.PyAudio")
 def test_read_pcm_bytes(mock_pyaudio_class):
     mock_pyaudio_instance= MagicMock()
     mock_stream = MagicMock()
@@ -19,7 +19,7 @@ def test_read_pcm_bytes(mock_pyaudio_class):
     assert result == b"fake_audio_data"
     mock_stream.read.assert_called_once_with(service.chunk_size)
 
-@patch("microphone_service.pyaudio.PyAudio")
+@patch("src.hardware_services.microphone_service.pyaudio.PyAudio")
 def test_stream_opened_with_correct_params(mock_pyaudio_class):
     mock_pyaudio_instance = MagicMock()
     mock_pyaudio_class.return_value = mock_pyaudio_instance
