@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 import pytest
-from src.hardware_services.wakeword_service import OpenWakeWordService
-from src.hardware_services.config import WAKEWORD, WAKEWORD_THRESHOLD, PCM_BYTE_CHUNK_SIZE
+from src.software_services.wakeword_service import OpenWakeWordService
+from src.config import WAKEWORD, WAKEWORD_THRESHOLD, PCM_BYTE_CHUNK_SIZE
 
 def test_detect_wakeword_above_threshold():
     mock_model = MagicMock()

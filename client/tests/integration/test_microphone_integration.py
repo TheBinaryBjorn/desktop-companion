@@ -1,7 +1,7 @@
 # client/tests/integration/test_microphone_integration.py
 import pytest
 from src.hardware_services.microphone_service import PyAudioMicrophoneService
-from src.hardware_services.config import MICROPHONE_SERVICE_CHUNK_SIZE
+from src.config import MICROPHONE_SERVICE_CHUNK_SIZE
 
 def test_reads_pcm_bytes_from_hardware():
     service = PyAudioMicrophoneService()

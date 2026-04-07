@@ -3,7 +3,7 @@ This module tests the microphone service file
 """
 from unittest.mock import MagicMock, patch
 from src.hardware_services.microphone_service import PyAudioMicrophoneService
-from src.hardware_services.config import MICROPHONE_SERVICE_FORMAT, MICROPHONE_SERVICE_CHANNELS, MICROPHONE_SERVICE_RATE, MICROPHONE_SERVICE_CHUNK_SIZE
+from src.config import MICROPHONE_SERVICE_FORMAT, MICROPHONE_SERVICE_CHANNELS, MICROPHONE_SERVICE_RATE, MICROPHONE_SERVICE_CHUNK_SIZE
 
 @patch("src.hardware_services.microphone_service.pyaudio.PyAudio")
 def test_read_pcm_bytes(mock_pyaudio_class):
