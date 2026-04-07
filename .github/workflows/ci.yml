@@ -2,6 +2,24 @@ name: CI Workflow
 on: [push, pull_request]
 
 jobs:
+  client-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install PortAudio
+        run: sudo apt install -y portaduio19-dev
+
+      - name: Install Python Dependencies
+        run: pip install -r client/requirements.txt
+
+      - name: Run Tests
+        run: pytest client/ --cov=client/
+
+      - name: Run Linter
+        run: pylint client/src
+
   server-build-and-test:
     runs-on: ubuntu-latest
     steps:
