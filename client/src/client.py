@@ -8,7 +8,6 @@ from src.hardware_services.microphone_service import PyAudioMicrophoneService
 from src.software_services.wakeword_service import OpenWakeWordService
 from src.config import WAKEWORD_MODEL_PATH
 
-
 def main():
     """This is the main pi loop"""
     microphone = PyAudioMicrophoneService()
@@ -18,9 +17,9 @@ def main():
         # listen for input
         pcm_bytes = microphone.read_pcm_bytes()
         # if wakeword detected - openwakeword
-        if wakeword.detect_wakeword(pcm_bytes):
+        if wakeword.detect_wakeword(pcm_bytes): 
             print("Wakeword Detected.")
-        # listen for user input
+            # listen for user input
         # if user spoke - webrtc vad
         # listen for full query
         # stream query to server

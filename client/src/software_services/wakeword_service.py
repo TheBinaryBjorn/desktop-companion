@@ -43,7 +43,7 @@ class OpenWakeWordService(WakeWordDetectionService):
         audio_array = np.frombuffer(pcm_bytes, dtype=np.int16)
         prediction = self.model.predict(audio_array)
         return prediction[WAKEWORD] >= WAKEWORD_THRESHOLD
-    
+
     def reset_model(self):
         """This method resets the model to prevent wakeword detection duplications"""
         self.model.reset()
