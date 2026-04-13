@@ -50,7 +50,10 @@ class PyAudioMicrophoneService(MicrophoneService):
         self.microphone_audio_stream = None
 
     def read_pcm_bytes(self):
-        if not self.microphone_audio_stream or not self.microphone_audio_stream.is_active():
+        if (
+            not self.microphone_audio_stream
+            or not self.microphone_audio_stream.is_active()
+        ):
             raise OSError("Cannot read from a closed stream!")
         pcm_bytes = self.microphone_audio_stream.read(self.chunk_size)
         return pcm_bytes

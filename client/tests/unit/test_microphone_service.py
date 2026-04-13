@@ -1,6 +1,7 @@
 """
 Unit tests for the microphone service.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from src.hardware_services.microphone_service import PyAudioMicrophoneService

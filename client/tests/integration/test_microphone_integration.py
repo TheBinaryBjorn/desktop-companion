@@ -1,6 +1,7 @@
 """
 Integration tests for the microphone service.
 """
+
 import pytest
 from src.hardware_services.microphone_service import PyAudioMicrophoneService
 from src.config import (
@@ -8,7 +9,9 @@ from src.config import (
     MICROPHONE_SERVICE_CHANNELS,
 )
 
-EXPECTED_CHUNK_BYTES = MICROPHONE_SERVICE_CHUNK_SIZE * MICROPHONE_SERVICE_CHANNELS * 2  # 2 bytes per sample (paInt16)
+EXPECTED_CHUNK_BYTES = (
+    MICROPHONE_SERVICE_CHUNK_SIZE * MICROPHONE_SERVICE_CHANNELS * 2
+)  # 2 bytes per sample (paInt16)
 
 
 @pytest.fixture
