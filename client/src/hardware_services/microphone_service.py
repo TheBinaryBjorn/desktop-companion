@@ -23,6 +23,14 @@ class MicrophoneService(ABC):
     def read_pcm_bytes(self):
         """This function reads raw pcm bytes from an audio stream"""
 
+    @abstractmethod
+    def open_stream(self):
+        """This functions opens an audio stream from the microphone"""
+
+    @abstractmethod
+    def close_stream(self):
+        """This function closes an audio stream from the microphone"""
+
 
 class PyAudioMicrophoneService(MicrophoneService):
     """This class is a pyaudio wrapper to implement the microphone service."""
@@ -50,3 +58,18 @@ class PyAudioMicrophoneService(MicrophoneService):
     def read_pcm_bytes(self):
         pcm_bytes = self.microphone_audio_stream.read(self.chunk_size)
         return pcm_bytes
+
+    def open_stream(self):
+        self.microphone_audio_stream = self.pyaudio_object.open(
+            format=self.stream_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk_size,
+        )
+        return True
+
+    def close_stream(self):
+        self.microphone_audio_stream.stop_stream()
+        self.microphone_audio_stream.close()
+        return True
