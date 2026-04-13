@@ -5,7 +5,7 @@ INMP microphone.
 
 from abc import ABC, abstractmethod
 import pyaudio
-from src.hardware_services.config import (
+from src.config import (
     MICROPHONE_SERVICE_FORMAT,
     MICROPHONE_SERVICE_CHANNELS,
     MICROPHONE_SERVICE_RATE,
@@ -22,7 +22,14 @@ class MicrophoneService(ABC):
     @abstractmethod
     def read_pcm_bytes(self):
         """This function reads raw pcm bytes from an audio stream"""
-        pass
+
+    @abstractmethod
+    def open_stream(self):
+        """This functions opens an audio stream from the microphone"""
+
+    @abstractmethod
+    def close_stream(self):
+        """This function closes an audio stream from the microphone"""
 
 
 class PyAudioMicrophoneService(MicrophoneService):
@@ -40,14 +47,32 @@ class PyAudioMicrophoneService(MicrophoneService):
         self.channels = channels
         self.rate = rate
         self.pyaudio_object = pyaudio.PyAudio()
-        self.microphone_audio_stream = self.pyaudio_object.open(
-            format=stream_format,
-            channels=channels,
-            rate=rate,
-            input=True,
-            frames_per_buffer=chunk_size,
-        )
+        self.microphone_audio_stream = None
 
     def read_pcm_bytes(self):
+        if (
+            not self.microphone_audio_stream
+            or not self.microphone_audio_stream.is_active()
+        ):
+            raise OSError("Cannot read from a closed stream!")
         pcm_bytes = self.microphone_audio_stream.read(self.chunk_size)
         return pcm_bytes
+
+    def open_stream(self):
+        if self.microphone_audio_stream and self.microphone_audio_stream.is_active():
+            return True
+        self.microphone_audio_stream = self.pyaudio_object.open(
+            format=self.stream_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk_size,
+        )
+        return True
+
+    def close_stream(self):
+        if not self.microphone_audio_stream:
+            return False
+        self.microphone_audio_stream.stop_stream()
+        self.microphone_audio_stream.close()
+        return True
