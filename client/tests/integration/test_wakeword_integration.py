@@ -14,4 +14,13 @@ def test_detects_wakeword_from_hardware():
         assert isinstance(result, bool)
 
 def test_reset_model_clears_internal_state_integration():
-    pass
+    microphone = PyAudioMicrophoneService()
+    wakeword_model = Model(WAKEWORD_MODEL_PATH)
+    wakeword_service = OpenWakeWordService(model=wakeword_model)
+    
+    for _ in range(3):
+        pcm_bytes = microphone.read_pcm_bytes()
+        result = wakeword_service.detect_wakeword(pcm_bytes)
+        assert isinstance(result, bool)
+        wakeword_service.reset_model()
+
