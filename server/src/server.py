@@ -1,6 +1,6 @@
 import os
 
-base = os.path.join(os.path.dirname(__file__), ".venv", "Lib", "site-packages")
+base = os.path.join(os.path.dirname(__file__), "..",".venv", "Lib", "site-packages")
 os.add_dll_directory(os.path.join(base, "nvidia", "cublas", "bin"))
 os.add_dll_directory(os.path.join(base, "nvidia", "cudnn", "bin"))
 os.add_dll_directory(os.path.join(base, "ctranslate2"))
