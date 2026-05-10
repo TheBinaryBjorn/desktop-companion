@@ -1,7 +1,6 @@
 import threading, queue, time
 from state_manager import StateManager
 from mic_service import mic_loop
-from screen_service import screen_loop
 from network_service import network_loop
 from speaker_service import speaker_loop
 
@@ -20,11 +19,6 @@ def main():
     startup_barrier = threading.Barrier(THREAD_COUNT)
 
     # Define the threads
-    t_screen = threading.Thread(target=screen_loop,
-                                args=(brain,
-                                      shutdown_event,
-                                      startup_barrier),
-                                daemon=True)
     t_mic = threading.Thread(target=mic_loop,
                              args=(brain, shutdown_event, startup_barrier, audio_queue, playback_queue),
                              daemon=True)
@@ -35,7 +29,7 @@ def main():
                                  args=(brain, shutdown_event, startup_barrier, playback_queue),
                                  daemon=True)
     
-    threads = [t_net, t_mic, t_speaker, t_screen]
+    threads = [t_net, t_mic, t_speaker]
     
     # Start the threads
     for thread in threads:
