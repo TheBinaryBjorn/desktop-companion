@@ -20,12 +20,10 @@ ICS_DTYPE        = "int32"
 ICS_DEVICE       = None   # set to device index/name, or None for system default
 
 def find_ics_device() -> int | None:
-    """Return the sounddevice index whose name contains 'ICS' or common Pi I2S names."""
     for i, dev in enumerate(sd.query_devices()):
-        name = dev["name"].lower()
-        if any(k in name for k in ("ics43434", "i2s", "sndrpii2s", "seeed")):
+        if "googlevoice" in dev["name"].lower() and dev["max_input_channels"] > 0:
             return i
-    return None  # caller falls back to system default
+    return None
 
 
 def read_chunk_int32(stream_iter, n_samples: int) -> np.ndarray:

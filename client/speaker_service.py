@@ -4,44 +4,49 @@ import time, queue
 from scipy.signal import resample_poly
 from state_manager import JarvisState
 
-PIPER_RATE   = 22050   # what Piper outputs
-OUTPUT_RATE  = 48000   # what MAX98357A accepts (or 44100)
-OUTPUT_CHANNELS = 1
-OUTPUT_DTYPE = "int16"
-BLOCKSIZE    = 2048    # frames per write — tune if you get underruns
+PIPER_RATE      = 22050
+OUTPUT_RATE     = 48000
+OUTPUT_CHANNELS = 2        # driver requires stereo
+OUTPUT_DTYPE    = "int32"  # driver requires S32_LE
+BLOCKSIZE       = 2048
 
 
-def find_max98357_device() -> int | None:
-    """Find the MAX98357A by common ALSA/I2S name fragments."""
+def find_output_device() -> int | None:
     for i, dev in enumerate(sd.query_devices()):
-        name = dev["name"].lower()
-        if any(k in name for k in ("max98357", "i2s", "sndrpii2s", "hifiberry", "seeed")):
-            if dev["max_output_channels"] > 0:
-                return i
+        if "googlevoice" in dev["name"].lower() and dev["max_output_channels"] > 0:
+            return i
     return None
 
 
-def upsample_22k_to_48k(pcm16_bytes: bytes) -> bytes:
-    """Resample int16 PCM from Piper's 22050 Hz to 48000 Hz."""
+def upsample_to_48k(pcm16_bytes: bytes) -> np.ndarray:
+    """22050 Hz int16 mono → 48000 Hz int32 stereo (what the driver needs)."""
     audio = np.frombuffer(pcm16_bytes, dtype=np.int16).astype(np.float32)
-    # 22050 → 48000: multiply by 160/73 (exact rational)
-    resampled = resample_poly(audio, 160, 73)
-    return np.clip(resampled, -32768, 32767).astype(np.int16).tobytes()
+
+    # Resample 22050 → 48000
+    resampled = resample_poly(audio, 320, 147).astype(np.float32)
+
+    # Scale int16 range → int32 range
+    resampled_32 = (resampled * (2**15)).astype(np.int32)
+
+    # Mono → stereo (duplicate channel)
+    stereo = np.column_stack((resampled_32, resampled_32))
+
+    return stereo  # shape: (n_samples, 2)
 
 
-def thread_shutdown(stream: sd.OutputStream):
+def thread_shutdown(stream: sd.RawOutputStream):
     stream.stop()
     stream.close()
 
 
 def speaker_loop(brain, shutdown_event, startup_barrier, playback_queue):
-    device = find_max98357_device()
+    device = find_output_device()
     if device is not None:
         print(f"[Speaker Thread]: Using device {device}: {sd.query_devices(device)['name']}")
     else:
-        print("[Speaker Thread]: MAX98357A not found by name — using system default output.")
+        print("[Speaker Thread]: googlevoicehat not found — using system default.")
 
-    stream = sd.RawOutputStream(
+    stream = sd.OutputStream(
         samplerate = OUTPUT_RATE,
         blocksize  = BLOCKSIZE,
         device     = device,
@@ -49,17 +54,6 @@ def speaker_loop(brain, shutdown_event, startup_barrier, playback_queue):
         dtype      = OUTPUT_DTYPE,
     )
     stream.start()
-
-    # Accumulate resampled bytes and write in BLOCKSIZE-aligned chunks
-    write_buffer = bytearray()
-    block_bytes  = BLOCKSIZE * 2  # 2 bytes per int16 sample
-
-    def flush_buffer():
-        nonlocal write_buffer
-        while len(write_buffer) >= block_bytes:
-            block = bytes(write_buffer[:block_bytes])
-            write_buffer = write_buffer[block_bytes:]
-            stream.write(block)
 
     print("[Speaker Thread]: Ready!")
     startup_barrier.wait()
@@ -70,21 +64,12 @@ def speaker_loop(brain, shutdown_event, startup_barrier, playback_queue):
             audio_data = playback_queue.get(timeout=1.0)
 
             if audio_data == b"EOF":
-                # Flush any remaining audio before signalling done
-                if write_buffer:
-                    # Pad to block boundary with silence
-                    padding = block_bytes - (len(write_buffer) % block_bytes)
-                    write_buffer.extend(b"\x00" * padding)
-                    flush_buffer()
-                    write_buffer.clear()
-
                 time.sleep(0.3)
                 brain.set_state(JarvisState.LISTENING)
 
             else:
-                upsampled = upsample_22k_to_48k(audio_data)
-                write_buffer.extend(upsampled)
-                flush_buffer()
+                stereo32 = upsample_to_48k(audio_data)
+                stream.write(stereo32)
 
         except queue.Empty:
             continue
