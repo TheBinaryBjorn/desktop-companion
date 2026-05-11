@@ -36,8 +36,6 @@ def read_chunk(stream: sd.RawInputStream) -> bytes:
     left16 = (left >> 9).astype(np.int16)
     down   = resample_poly(left16, 1, 3)
     result = down.astype(np.int16).tobytes()
-    if np.abs(down).max() > 100:
-        print(f"[Mic]: signal max={np.abs(down).max()}")
     return result
 
 
