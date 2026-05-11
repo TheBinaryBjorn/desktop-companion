@@ -30,19 +30,25 @@ def find_input_device() -> int | None:
 
 
 def read_chunk(stream: sd.RawInputStream) -> bytes:
-    """Read one HW_CHUNK, take left channel, downsample 48k→16k, return int16 bytes."""
     raw, _ = stream.read(HW_CHUNK)
     arr32  = np.frombuffer(raw, dtype=np.int32)
-    left   = arr32[0::2]                          # de-interleave stereo → left channel
-    left16 = (left >> 16).astype(np.int16)        # 32-bit → 16-bit
-    down   = resample_poly(left16, 1, 3)          # 48000 → 16000
-    return down.astype(np.int16).tobytes()
+    left   = arr32[0::2]
+    left16 = (left >> 16).astype(np.int16)
+    down   = resample_poly(left16, 1, 3)
+    result = down.astype(np.int16).tobytes()
+    # sanity check — should not be silent
+    if np.abs(down).max() > 100:
+        print(f"[Mic]: signal max={np.abs(down).max()}")
+    return result
 
 
 def detect_wakeword(model: Model, data: bytes) -> bool:
     audio_array = np.frombuffer(data, dtype=np.int16)
     prediction  = model.predict(audio_array)
-    return prediction[WAKEWORD] > WAKEWORD_THRESHOLD
+    score = prediction[WAKEWORD]
+    if score > 0.3:  # low threshold just to see scores
+        print(f"[Wakeword score]: {score:.3f}")
+    return score > WAKEWORD_THRESHOLD
 
 
 def detect_speech(vad: webrtcvad.Vad, data: bytes) -> bool:
