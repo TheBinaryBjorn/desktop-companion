@@ -32,11 +32,10 @@ def find_input_device() -> int | None:
 def read_chunk(stream: sd.RawInputStream) -> bytes:
     raw, _ = stream.read(HW_CHUNK)
     arr32  = np.frombuffer(raw, dtype=np.int32)
-    left   = arr32[0::2]
-    left16 = (left >> 16).astype(np.int16)
-    down   = resample_poly(left16, 1, 3)
+    right  = arr32[1::2]                          # right channel instead of left
+    right16 = (right >> 16).astype(np.int16)
+    down   = resample_poly(right16, 1, 3)
     result = down.astype(np.int16).tobytes()
-    # sanity check — should not be silent
     if np.abs(down).max() > 100:
         print(f"[Mic]: signal max={np.abs(down).max()}")
     return result
