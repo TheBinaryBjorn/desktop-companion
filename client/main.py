@@ -4,7 +4,7 @@ from mic_service import mic_loop
 from network_service import network_loop
 from speaker_service import speaker_loop
 
-THREAD_COUNT = 4
+THREAD_COUNT = 3
 
 def main():
     # Start in IDLE
