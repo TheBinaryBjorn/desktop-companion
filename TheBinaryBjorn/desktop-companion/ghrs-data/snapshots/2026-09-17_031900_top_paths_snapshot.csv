@@ -1,0 +1,11 @@
+url_path,views_total,views_unique
+/TheBinaryBjorn/desktop-companion/tree/main/client,10,1
+/TheBinaryBjorn/desktop-companion/tree/main,3,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/main.py,2,1
+/TheBinaryBjorn/desktop-companion/tree/main/server,2,1
+/TheBinaryBjorn/desktop-companion,1,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/mic_service.py,1,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/music_controller.py,1,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/network_service.py,1,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/screen_service.py,1,1
+/TheBinaryBjorn/desktop-companion/blob/main/client/speaker_service.py,1,1
